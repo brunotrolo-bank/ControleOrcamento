@@ -452,6 +452,95 @@ function routerGetFilterValues(sheetName, fieldKeys) {
   });
 }
 
+// --------------------------------------------------------------------------
+// BUDGET CONTROL — FORECAST DATA
+// --------------------------------------------------------------------------
+
+/**
+ * GET — Lê a aba FORECAST e retorna linhas estruturadas + lista de meses.
+ * Detecta colunas mensais tanto como objetos Date (cabeçalho data no Sheets)
+ * quanto como texto no formato "jan.-26", "jan-26", etc.
+ * Não usa DAO/normalizeKey para não perder os cabeçalhos de data.
+ */
+function routerGetForecastData() {
+  return _route(() => {
+    const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(ALLOWED_SHEETS.FORECAST);
+    if (!sheet) throw new Error("Aba FORECAST não encontrada");
+
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    if (lastRow < 2) return { rows: [], months: [] };
+
+    const raw     = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+    const headers = raw[0];
+
+    const PTR_MON = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
+    // Classify each column as 'month' or 'field'
+    const colRoles = headers.map((h, i) => {
+      // Date object in header → month column
+      if (h instanceof Date) {
+        const m = h.getMonth();
+        const y = String(h.getFullYear()).slice(-2);
+        return { kind: 'month', label: PTR_MON[m] + '.-' + y, idx: i };
+      }
+      const s = String(h || '').trim();
+      if (!s) return { kind: 'skip', idx: i };
+
+      // Normalize for comparison
+      const nl = s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+      // Month text pattern: "jan.-26", "jan-26", "jan/26", "jan 26"
+      const mm = nl.match(/^(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[^\d]*(\d{2})$/);
+      if (mm) return { kind: 'month', label: mm[1] + '.-' + mm[2], idx: i };
+
+      // Field column — normalize to snake_case
+      const key = nl.replace(/\s+/g, '_').replace(/[^\w]/g, '');
+      return { kind: 'field', key: key || ('col_' + i), idx: i };
+    });
+
+    const months = colRoles.filter(c => c.kind === 'month').map(c => c.label);
+
+    // Parse data rows
+    const rows = [];
+    for (let r = 1; r < raw.length; r++) {
+      const row = raw[r];
+      if (row.every(c => c === '' || c === null || c === undefined)) continue;
+
+      const obj = { _monthly: {} };
+
+      colRoles.forEach(col => {
+        const v = row[col.idx];
+        if (col.kind === 'month') {
+          obj._monthly[col.label] = typeof v === 'number'
+            ? v
+            : (parseFloat(String(v || '').replace(/[R$\s]/g,'').replace(/\./g,'').replace(',','.')) || 0);
+        } else if (col.kind === 'field') {
+          obj[col.key] = v instanceof Date
+            ? Utilities.formatDate(v, TZ, 'dd/MM/yyyy')
+            : v;
+        }
+      });
+
+      // Ensure numeric projecao
+      const pKey = Object.keys(obj).find(k => k.startsWith('projecao') || k.startsWith('projeo'));
+      if (pKey && obj[pKey] !== undefined) {
+        obj.projecao_2026 = typeof obj[pKey] === 'number'
+          ? obj[pKey]
+          : (parseFloat(String(obj[pKey] || '').replace(/[R$\s]/g,'').replace(/\./g,'').replace(',','.')) || 0);
+      }
+      if (!obj.projecao_2026) {
+        obj.projecao_2026 = Object.values(obj._monthly).reduce((s, v) => s + v, 0);
+      }
+
+      rows.push(obj);
+    }
+
+    return { rows, months };
+  });
+}
+
 function routerGetNotaFiscalCombined() {
   return _route(() => {
     const nfs = fetchAll(ALLOWED_SHEETS.NOTA_FISCAL);

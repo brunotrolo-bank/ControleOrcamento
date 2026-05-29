@@ -1,0 +1,707 @@
+<!--
+  Page_BudgetControl.html — Controle Orçamentário (Forecast vs Realizado)
+  Inserido logo abaixo de Card_Filter no view-home.
+-->
+<style>
+.bc-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.bc-kpi {
+  background: var(--c-surface-cont-low);
+  border: 1px solid var(--c-outline-variant);
+  border-radius: var(--border-radius-md);
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.bc-kpi::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--bc-kpi-accent, var(--c-primary));
+}
+
+.bc-kpi-label {
+  font-size: 0.675rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-outline);
+  margin-bottom: 4px;
+}
+
+.bc-kpi-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--c-on-surface);
+  font-family: 'DM Mono', monospace;
+  line-height: 1.2;
+}
+
+.bc-kpi-sub {
+  font-size: 0.7rem;
+  color: var(--c-outline);
+  margin-top: 2px;
+}
+
+.bc-progress {
+  height: 4px;
+  background: var(--c-outline-variant);
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.bc-progress-bar {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--bc-kpi-accent, var(--c-primary));
+  transition: width 0.6s ease;
+}
+
+.bc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.bc-search-box {
+  flex: 1;
+  min-width: 180px;
+  max-width: 320px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--c-surface-cont-low);
+  border: 1px solid var(--c-outline-variant);
+  border-radius: var(--border-radius-sm);
+  padding: 0 12px;
+  transition: border-color var(--t-fast);
+}
+
+.bc-search-box:focus-within {
+  border-color: var(--c-primary);
+}
+
+.bc-search-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.875rem;
+  color: var(--c-on-surface);
+  font-family: inherit;
+  width: 100%;
+  padding: 9px 0;
+}
+
+.bc-count-label {
+  font-size: 0.775rem;
+  color: var(--c-outline);
+  font-family: 'DM Mono', monospace;
+  white-space: nowrap;
+}
+
+.bc-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--c-outline-variant);
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.bc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.bc-table thead th {
+  background: var(--c-surface-cont-low);
+  border-bottom: 2px solid var(--c-outline-variant);
+  padding: 10px 12px;
+  text-align: right;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-outline);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.bc-table thead th:first-child,
+.bc-table thead th:nth-child(2) {
+  text-align: left;
+  position: sticky;
+  z-index: 4;
+  background: var(--c-surface-cont-low);
+}
+
+.bc-table thead th:first-child { left: 0; min-width: 120px; max-width: 140px; }
+.bc-table thead th:nth-child(2) { left: 140px; min-width: 80px; }
+
+.bc-table tfoot td {
+  background: var(--c-surface-cont-low);
+  border-top: 2px solid var(--c-outline-variant);
+  padding: 10px 12px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-align: right;
+  white-space: nowrap;
+  font-family: 'DM Mono', monospace;
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+}
+
+.bc-table tfoot td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  background: var(--c-surface-cont-low);
+}
+
+/* Group header row */
+.bc-group-hdr {
+  background: color-mix(in srgb, var(--c-primary) 6%, var(--c-surface));
+  cursor: pointer;
+  transition: background var(--t-fast);
+  border-top: 2px solid var(--c-outline-variant);
+}
+
+.bc-group-hdr:hover {
+  background: color-mix(in srgb, var(--c-primary) 12%, var(--c-surface));
+}
+
+.bc-group-hdr td {
+  padding: 10px 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bc-group-hdr td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: inherit;
+}
+
+.bc-group-hdr td:nth-child(2) {
+  position: sticky;
+  left: 140px;
+  z-index: 2;
+  background: inherit;
+}
+
+.bc-inibank-badge {
+  display: inline-block;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--c-primary) 15%, transparent);
+  color: var(--c-primary);
+  border-radius: 4px;
+  padding: 2px 7px;
+  letter-spacing: 0.03em;
+}
+
+.bc-chevron {
+  font-size: 18px;
+  transition: transform 0.2s ease;
+  vertical-align: middle;
+  margin-right: 6px;
+  color: var(--c-outline);
+}
+
+.bc-chevron.collapsed { transform: rotate(-90deg); }
+
+/* Data rows */
+.bc-tipo-row td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--c-outline-variant);
+  white-space: nowrap;
+  text-align: right;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.8rem;
+}
+
+.bc-tipo-row td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--c-surface);
+  font-family: inherit;
+}
+
+.bc-tipo-row td:nth-child(2) {
+  text-align: left;
+  position: sticky;
+  left: 140px;
+  z-index: 2;
+  background: var(--c-surface);
+}
+
+.bc-tipo-row:hover td {
+  background: var(--c-surface-cont-low) !important;
+}
+
+.bc-tipo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  padding: 3px 8px;
+}
+
+.bc-badge-forecast  { background: color-mix(in srgb,var(--c-primary) 12%,transparent); color: var(--c-primary); }
+.bc-badge-realizado { background: color-mix(in srgb,#059669 12%,transparent); color: #059669; }
+.bc-badge-resultado { background: color-mix(in srgb,#7c3aed 12%,transparent); color: #7c3aed; }
+.bc-badge-ajustado  { background: color-mix(in srgb,#d97706 12%,transparent); color: #d97706; }
+
+.bc-item-chip {
+  display: inline-block;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--c-outline);
+  background: var(--c-outline-variant);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: 4px;
+}
+
+.bc-neg { color: #dc2626; }
+.bc-pos { color: #059669; }
+.bc-zero { color: var(--c-outline); }
+
+.bc-dash { color: var(--c-outline-variant); }
+
+/* Collapsed state */
+.bc-tipo-row.bc-hidden { display: none; }
+
+/* Empty / loading */
+.bc-placeholder {
+  padding: 32px;
+  text-align: center;
+  color: var(--c-outline);
+  font-size: 0.875rem;
+}
+</style>
+
+<div class="card" id="bc-root" style="margin-bottom:0;">
+  <div class="card-header">
+    <div>
+      <h3>Controle Orçamentário</h3>
+      <p class="card-subtitle">Forecast × Realizado × Resultado por Iniciativa</p>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button class="btn-icon" id="bc-expand-all" title="Expandir todos">
+        <span class="material-symbols-rounded">unfold_more</span>
+      </button>
+      <button class="btn-icon" id="bc-collapse-all" title="Recolher todos">
+        <span class="material-symbols-rounded">unfold_less</span>
+      </button>
+      <button class="btn-icon" id="bc-refresh" title="Atualizar">
+        <span class="material-symbols-rounded">refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="bc-summary" class="bc-summary-grid" style="display:none;"></div>
+
+  <div class="bc-toolbar">
+    <div class="bc-search-box">
+      <span class="material-symbols-rounded" style="font-size:18px;color:var(--c-outline);flex-shrink:0">search</span>
+      <input id="bc-search" type="text" placeholder="Buscar iniciativa ou código...">
+    </div>
+    <span id="bc-count-label" class="bc-count-label">— iniciativas</span>
+  </div>
+
+  <div class="bc-table-wrap">
+    <table class="bc-table" id="bc-table">
+      <thead id="bc-thead"></thead>
+      <tbody id="bc-tbody">
+        <tr><td class="bc-placeholder">Carregando...</td></tr>
+      </tbody>
+      <tfoot id="bc-tfoot"></tfoot>
+    </table>
+  </div>
+</div>
+
+<script>
+window.BudgetControl = (function () {
+
+  var _rawRows = [];
+  var _months  = [];
+  var _groups  = [];
+  var _visGroups = [];
+  var _collapsed = {};
+  var _inited    = false;
+  var _loaded    = false;
+  var _search    = '';
+  var _filterIni = [];  // active initiative filter from Card_Filter
+
+  var TIPO_ORDER = ['Forecast', 'Realizado', 'Resultado', 'Forecast Ajustado'];
+  var TIPO_ITEMS = { 'Forecast': 'A', 'Realizado': 'B', 'Resultado': 'A-B=C', 'Forecast Ajustado': 'FA' };
+  var TIPO_BADGE = { 'Forecast': 'bc-badge-forecast', 'Realizado': 'bc-badge-realizado', 'Resultado': 'bc-badge-resultado', 'Forecast Ajustado': 'bc-badge-ajustado' };
+
+  function _normTipo(t) {
+    var s = String(t || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (s.includes('ajust') || s.includes('fa') && s.includes('forecast')) return 'Forecast Ajustado';
+    if (s === 'fa' || s === '5') return 'Forecast Ajustado';
+    if (s.includes('forecast') || s === 'a') return 'Forecast';
+    if (s.includes('realiz') || s === 'b') return 'Realizado';
+    if (s.includes('result') || s.includes('saldo') || s === 'c' || s === 'a-b=c') return 'Resultado';
+    return String(t || '').trim();
+  }
+
+  function _R(v) { return Math.round((parseFloat(v) || 0) * 100) / 100; }
+
+  function _fmtCompact(n) {
+    var abs = Math.abs(n);
+    var s;
+    if (abs === 0) return '<span class="bc-dash">—</span>';
+    if (abs >= 1000000) s = 'R$ ' + (abs / 1000000).toFixed(2).replace('.', ',') + 'M';
+    else if (abs >= 1000) s = 'R$ ' + (abs / 1000).toFixed(1).replace('.', ',') + 'K';
+    else s = 'R$ ' + Math.round(abs).toLocaleString('pt-BR');
+    return n < 0 ? '<span class="bc-neg">-' + s + '</span>' : s;
+  }
+
+  function _fmtColored(n, tipo) {
+    var abs = Math.abs(n);
+    var s;
+    if (abs === 0) return '<span class="bc-dash">—</span>';
+    if (abs >= 1000000) s = 'R$ ' + (abs / 1000000).toFixed(2).replace('.', ',') + 'M';
+    else if (abs >= 1000) s = 'R$ ' + (abs / 1000).toFixed(1).replace('.', ',') + 'K';
+    else s = 'R$ ' + Math.round(abs).toLocaleString('pt-BR');
+    if (n < 0) s = '-' + s;
+    if (tipo === 'Resultado') {
+      if (n > 0) return '<span class="bc-pos">' + s + '</span>';
+      if (n < 0) return '<span class="bc-neg">' + s + '</span>';
+    }
+    return s;
+  }
+
+  function _buildGroups(rows) {
+    var map = {}, order = [];
+    rows.forEach(function (r) {
+      var inibank    = String(r.inibank || r.cod_iniciativa || r.codigo || '').trim() || '—';
+      var iniciativa = String(r.iniciativa || r.descricao_iniciativa || r.descricao || '').trim();
+      var tipo       = _normTipo(r.tipo || '');
+      var key        = inibank;
+
+      if (!map[key]) {
+        map[key] = { inibank: inibank, iniciativa: iniciativa, tipoRows: {} };
+        order.push(key);
+      }
+      if (!map[key].iniciativa && iniciativa) map[key].iniciativa = iniciativa;
+
+      // Compute projecao from monthly sum if not provided
+      var projecao = _R(r.projecao_2026 !== undefined ? r.projecao_2026 : (r.projecao !== undefined ? r.projecao : 0));
+      if (!projecao) {
+        projecao = Object.values(r._monthly || {}).reduce(function (s, v) { return s + _R(v); }, 0);
+      }
+
+      map[key].tipoRows[tipo] = { projecao: projecao, monthly: r._monthly || {} };
+    });
+
+    // Compute Resultado if not present
+    order.forEach(function (k) {
+      var g = map[k];
+      if (!g.tipoRows['Resultado'] && g.tipoRows['Forecast'] && g.tipoRows['Realizado']) {
+        var fRow = g.tipoRows['Forecast'];
+        var rRow = g.tipoRows['Realizado'];
+        var monthly = {};
+        _months.forEach(function (m) {
+          monthly[m] = _R((fRow.monthly[m] || 0) - (rRow.monthly[m] || 0));
+        });
+        var projecao = _R(fRow.projecao - rRow.projecao);
+        g.tipoRows['Resultado'] = { projecao: projecao, monthly: monthly };
+      }
+    });
+
+    return order.map(function (k) { return map[k]; });
+  }
+
+  function _applyFilters() {
+    var q = _search.toLowerCase();
+    _visGroups = _groups.filter(function (g) {
+      var matchSearch = !q ||
+        g.inibank.toLowerCase().includes(q) ||
+        g.iniciativa.toLowerCase().includes(q);
+      var matchIni = _filterIni.length === 0 ||
+        _filterIni.some(function (f) {
+          return g.inibank.toLowerCase().includes(f.toLowerCase()) ||
+                 g.iniciativa.toLowerCase().includes(f.toLowerCase());
+        });
+      return matchSearch && matchIni;
+    });
+  }
+
+  function _computeSummary() {
+    var tF = 0, tR = 0, tFA = 0;
+    _visGroups.forEach(function (g) {
+      if (g.tipoRows['Forecast'])           tF  = _R(tF  + g.tipoRows['Forecast'].projecao);
+      if (g.tipoRows['Realizado'])          tR  = _R(tR  + g.tipoRows['Realizado'].projecao);
+      if (g.tipoRows['Forecast Ajustado']) tFA = _R(tFA + g.tipoRows['Forecast Ajustado'].projecao);
+    });
+    var saldo = _R(tF - tR);
+    var pct   = tF ? Math.min(100, Math.round((tR / tF) * 100)) : 0;
+    return { tF: tF, tR: tR, saldo: saldo, tFA: tFA, pct: pct };
+  }
+
+  function _fmtBig(n) {
+    var abs = Math.abs(n);
+    var s;
+    if (abs >= 1000000) s = 'R$ ' + (abs / 1000000).toFixed(2).replace('.', ',') + 'M';
+    else if (abs >= 1000) s = 'R$ ' + (abs / 1000).toFixed(1).replace('.', ',') + 'K';
+    else s = 'R$ ' + Math.round(abs).toLocaleString('pt-BR');
+    if (n < 0) s = '-' + s;
+    return s;
+  }
+
+  function _renderSummary(s) {
+    var el = document.getElementById('bc-summary');
+    if (!el) return;
+    var saldoColor = s.saldo >= 0 ? '#059669' : '#dc2626';
+    var saldoText = s.saldo >= 0 ? 'Saldo positivo' : 'Estouro de orçamento';
+    el.innerHTML =
+      '<div class="bc-kpi" style="--bc-kpi-accent:var(--c-primary)">' +
+        '<div class="bc-kpi-label">Forecast Total</div>' +
+        '<div class="bc-kpi-value">' + _fmtBig(s.tF) + '</div>' +
+        '<div class="bc-kpi-sub">Projeção orçamentária</div>' +
+      '</div>' +
+      '<div class="bc-kpi" style="--bc-kpi-accent:#059669">' +
+        '<div class="bc-kpi-label">Realizado</div>' +
+        '<div class="bc-kpi-value">' + _fmtBig(s.tR) + '</div>' +
+        '<div class="bc-kpi-sub">' + s.pct + '% do forecast</div>' +
+        '<div class="bc-progress"><div class="bc-progress-bar" style="width:' + s.pct + '%;background:#059669"></div></div>' +
+      '</div>' +
+      '<div class="bc-kpi" style="--bc-kpi-accent:' + saldoColor + '">' +
+        '<div class="bc-kpi-label">Resultado (F-R)</div>' +
+        '<div class="bc-kpi-value" style="color:' + saldoColor + '">' + _fmtBig(s.saldo) + '</div>' +
+        '<div class="bc-kpi-sub">' + saldoText + '</div>' +
+      '</div>' +
+      '<div class="bc-kpi" style="--bc-kpi-accent:#d97706">' +
+        '<div class="bc-kpi-label">Forecast Ajustado</div>' +
+        '<div class="bc-kpi-value">' + (s.tFA ? _fmtBig(s.tFA) : '<span style="color:var(--c-outline)">—</span>') + '</div>' +
+        '<div class="bc-kpi-sub">Projeção revisada</div>' +
+      '</div>';
+    el.style.display = 'grid';
+  }
+
+  function _buildThead() {
+    var html = '<tr>';
+    html += '<th style="left:0;min-width:140px;max-width:140px;">Tipo</th>';
+    html += '<th style="left:140px;min-width:80px;max-width:80px;">Item</th>';
+    html += '<th style="text-align:right;min-width:110px;">Projeção 2026</th>';
+    _months.forEach(function (m) {
+      html += '<th style="min-width:92px;">' + m + '</th>';
+    });
+    html += '</tr>';
+    return html;
+  }
+
+  function _buildTfoot(allGroups) {
+    var totals = {};
+    _months.forEach(function (m) { totals[m] = { F: 0, R: 0, Res: 0, FA: 0 }; });
+    var tProjF = 0, tProjR = 0, tProjRes = 0, tProjFA = 0;
+
+    allGroups.forEach(function (g) {
+      TIPO_ORDER.forEach(function (tipo) {
+        if (!g.tipoRows[tipo]) return;
+        var row = g.tipoRows[tipo];
+        var key = tipo === 'Forecast' ? 'F' : tipo === 'Realizado' ? 'R' : tipo === 'Resultado' ? 'Res' : 'FA';
+        if (tipo === 'Forecast')           tProjF   = _R(tProjF   + row.projecao);
+        if (tipo === 'Realizado')          tProjR   = _R(tProjR   + row.projecao);
+        if (tipo === 'Resultado')          tProjRes = _R(tProjRes + row.projecao);
+        if (tipo === 'Forecast Ajustado') tProjFA  = _R(tProjFA  + row.projecao);
+        _months.forEach(function (m) {
+          totals[m][key] = _R((totals[m][key] || 0) + (row.monthly[m] || 0));
+        });
+      });
+    });
+
+    function tipoRow(tipo, label, proj, key, cls) {
+      var html = '<tr>';
+      html += '<td style="text-align:left;position:sticky;left:0;z-index:4;">';
+      html += '<span class="bc-tipo-badge ' + cls + '">' + label + '</span></td>';
+      html += '<td style="text-align:right;">' + _fmtColored(proj, tipo) + '</td>';
+      _months.forEach(function (m) {
+        html += '<td>' + _fmtColored(totals[m][key], tipo) + '</td>';
+      });
+      html += '</tr>';
+      return html;
+    }
+
+    return tipoRow('Forecast', 'Forecast', tProjF, 'F', 'bc-badge-forecast') +
+           tipoRow('Realizado', 'Realizado', tProjR, 'R', 'bc-badge-realizado') +
+           tipoRow('Resultado', 'Resultado', tProjRes, 'Res', 'bc-badge-resultado') +
+           tipoRow('Forecast Ajustado', 'F. Ajust.', tProjFA, 'FA', 'bc-badge-ajustado');
+  }
+
+  function _buildGroupRows(g, idx) {
+    var gId   = 'bcg-' + idx;
+    var isCollapsed = !!_collapsed[gId];
+    var hidCls = isCollapsed ? ' bc-hidden' : '';
+
+    var reRow = g.tipoRows['Realizado'];
+    var projR = reRow ? _fmtCompact(reRow.projecao) : '<span class="bc-dash">—</span>';
+
+    var html = '<tr class="bc-group-hdr" data-gid="' + gId + '" onclick="BudgetControl.toggleGroup(\'' + gId + '\')">';
+    html += '<td colspan="' + (3 + _months.length) + '">';
+    html += '<span class="material-symbols-rounded bc-chevron' + (isCollapsed ? ' collapsed' : '') + '" id="chv-' + gId + '">expand_more</span>';
+    html += '<span class="bc-inibank-badge">' + _esc(g.inibank) + '</span> ';
+    html += '<span style="font-size:0.82rem;font-weight:600;color:var(--c-on-surface);margin-left:6px;">' + _esc(g.iniciativa) + '</span>';
+    html += '<span style="margin-left:12px;font-size:0.75rem;font-weight:600;color:var(--c-outline);">Realizado: </span>' + projR;
+    html += '</td></tr>';
+
+    TIPO_ORDER.forEach(function (tipo) {
+      var row = g.tipoRows[tipo];
+      if (!row) return;
+      var badgeCls = TIPO_BADGE[tipo] || '';
+      var item     = TIPO_ITEMS[tipo] || '';
+
+      html += '<tr class="bc-tipo-row' + hidCls + '" data-gid="' + gId + '">';
+      html += '<td><span class="bc-tipo-badge ' + badgeCls + '">' + _esc(tipo) + '</span></td>';
+      html += '<td style="text-align:right;"><span class="bc-item-chip">' + _esc(item) + '</span></td>';
+      html += '<td style="text-align:right;">' + _fmtColored(row.projecao, tipo) + '</td>';
+      _months.forEach(function (m) {
+        var v = row.monthly[m];
+        html += '<td>' + _fmtColored(_R(v !== undefined ? v : 0), tipo) + '</td>';
+      });
+      html += '</tr>';
+    });
+
+    return html;
+  }
+
+  function _esc(v) {
+    return String(v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function _render() {
+    var thead = document.getElementById('bc-thead');
+    var tbody = document.getElementById('bc-tbody');
+    var tfoot = document.getElementById('bc-tfoot');
+    var countLbl = document.getElementById('bc-count-label');
+
+    if (!tbody) return;
+
+    _applyFilters();
+    var summary = _computeSummary();
+    _renderSummary(summary);
+
+    if (countLbl) countLbl.textContent = _visGroups.length + ' iniciativa' + (_visGroups.length !== 1 ? 's' : '');
+
+    if (_visGroups.length === 0) {
+      if (thead) thead.innerHTML = '';
+      tbody.innerHTML = '<tr><td class="bc-placeholder" colspan="' + (3 + _months.length) + '">Nenhuma iniciativa encontrada.</td></tr>';
+      if (tfoot) tfoot.innerHTML = '';
+      return;
+    }
+
+    if (thead) thead.innerHTML = _buildThead();
+
+    var html = '';
+    _visGroups.forEach(function (g, i) { html += _buildGroupRows(g, i); });
+    tbody.innerHTML = html;
+
+    if (tfoot) tfoot.innerHTML = _buildTfoot(_visGroups);
+  }
+
+  function toggleGroup(gId) {
+    _collapsed[gId] = !_collapsed[gId];
+    document.querySelectorAll('[data-gid="' + gId + '"].bc-tipo-row').forEach(function (row) {
+      row.classList.toggle('bc-hidden', !!_collapsed[gId]);
+    });
+    var chv = document.getElementById('chv-' + gId);
+    if (chv) chv.classList.toggle('collapsed', !!_collapsed[gId]);
+  }
+
+  function _load() {
+    var tbody = document.getElementById('bc-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td class="bc-placeholder">Carregando dados de forecast...</td></tr>';
+
+    var t0 = Date.now();
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (window.SyncMonitor) SyncMonitor.update('success', 'Forecast carregado', { gas: Date.now() - t0, cpu: 0 });
+        if (!res || !res.success) {
+          if (tbody) tbody.innerHTML = '<tr><td class="bc-placeholder">Erro ao carregar dados.</td></tr>';
+          return;
+        }
+        _rawRows = res.rows || [];
+        _months  = res.months || [];
+        _groups  = _buildGroups(_rawRows);
+        _render();
+      })
+      .withFailureHandler(function (e) {
+        if (window.SyncMonitor) SyncMonitor.update('error', 'Erro no forecast');
+        var tbody = document.getElementById('bc-tbody');
+        if (tbody) tbody.innerHTML = '<tr><td class="bc-placeholder">Erro: ' + (e && e.message ? e.message : String(e)) + '</td></tr>';
+      })
+      .routerGetForecastData();
+  }
+
+  function init() {
+    if (_inited) return;
+    _inited = true;
+
+    document.getElementById('bc-refresh').addEventListener('click', function () {
+      _loaded = false;
+      _load();
+    });
+
+    document.getElementById('bc-search').addEventListener('input', function (e) {
+      _search = e.target.value.trim();
+      _render();
+    });
+
+    document.getElementById('bc-expand-all').addEventListener('click', function () {
+      _collapsed = {};
+      document.querySelectorAll('.bc-tipo-row').forEach(function (r) { r.classList.remove('bc-hidden'); });
+      document.querySelectorAll('.bc-chevron').forEach(function (c) { c.classList.remove('collapsed'); });
+    });
+
+    document.getElementById('bc-collapse-all').addEventListener('click', function () {
+      _visGroups.forEach(function (g, i) { _collapsed['bcg-' + i] = true; });
+      document.querySelectorAll('.bc-tipo-row').forEach(function (r) { r.classList.add('bc-hidden'); });
+      document.querySelectorAll('.bc-chevron').forEach(function (c) { c.classList.add('collapsed'); });
+    });
+
+    window.addEventListener('filterchange', function (e) {
+      var filters = (e && e.detail && e.detail.filters) ? e.detail.filters : {};
+      _filterIni = (filters.iniciativa && filters.iniciativa.length > 0) ? filters.iniciativa : [];
+      if (_groups.length > 0) _render();
+    });
+
+    window.addEventListener('viewFocus', function (e) {
+      if (e && e.detail && e.detail.viewId === 'view-home' && !_loaded) {
+        _loaded = true;
+        _load();
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () { init(); });
+
+  return { toggleGroup: toggleGroup, reload: _load };
+})();
+</script>
