@@ -584,7 +584,7 @@
   var _forecastMonths = [];   // labels de meses do forecast ("jun.-26")
   var _forecastLoaded = false;
   var _profFilters = { papel:'', iniciativa:'', fornecedor:'', status:'', nome:'' };  // filtros locais de Profissionais Alocados
-  var _prestadorStatus = { byMat:{}, byNome:{} };  // status (Ativo/Inativo) por prestador, da aba PRESTADOR
+  var _prestadores = [];  // lista COMPLETA da aba PRESTADOR: [{mat, nome, status, papel}]
 
   function R(n) { return Math.round((parseFloat(n)||0)*100)/100; }
   function BRL(n){ return R(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
@@ -1347,19 +1347,9 @@
 
   function _normNome(v){ return String(v||'').trim().normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
 
-  // Status (Ativo/Inativo) do prestador: tenta por matrícula, depois por nome.
-  function _profStatusOf(mat, nome) {
-    var byMat = _prestadorStatus.byMat || {}, byNome = _prestadorStatus.byNome || {};
-    var m = String(mat||'').trim();
-    if (m && byMat[m]) return byMat[m];
-    var nk = _normNome(nome);
-    if (nk && byNome[nk]) return byNome[nk];
-    return '';
-  }
-
-  // Achata as linhas de profissionais de cada NF autorizada em entradas
-  // individuais. A INICIATIVA vem da aba NOTA_FISCAL_ANALITICO (linha do
-  // profissional); o status Ativo/Inativo vem da aba PRESTADOR.
+  // Achata as linhas de profissionais (aba NOTA_FISCAL_ANALITICO) de cada NF
+  // autorizada em entradas individuais. APENAS aqui a INICIATIVA e o FORNECEDOR
+  // vêm da analítica — a lista-base de prestadores vem da aba PRESTADOR.
   function _profEntries(data) {
     var out = [];
     data.forEach(function(row){
@@ -1375,10 +1365,8 @@
           papel:  (p.papel_prestador||'').trim() || '—',
           ini:    ini,
           forn:   forn,
-          status: _profStatusOf(p.matricula, p.nome_profissional) || '—',
           total:  R(p.subtotal_nfe||0),
-          horas:  parseFloat(p.total_horas)||0,
-          hh:     parseFloat(p.hh)||0
+          horas:  parseFloat(p.total_horas)||0
         });
       });
     });
@@ -1400,38 +1388,75 @@
     var el = document.getElementById('home-prof-detail'); if(!el) return;
     var entries = _profEntries(data);
 
-    // Opções dos dropdowns (a partir de TODAS as entradas, sem filtro local)
-    var papeis={}, inis={}, forns={};
-    entries.forEach(function(e){ papeis[e.papel]=1; inis[e.ini]=1; forns[e.forn]=1; });
-    _fillSelect(document.getElementById('prof-f-papel'),      Object.keys(papeis), _profFilters.papel);
-    _fillSelect(document.getElementById('prof-f-iniciativa'), Object.keys(inis),   _profFilters.iniciativa);
-    _fillSelect(document.getElementById('prof-f-fornecedor'), Object.keys(forns),  _profFilters.fornecedor);
-
-    // Aplica filtros locais no nível de entrada
-    var nq = (_profFilters.nome||'').trim().toLowerCase();
-    var filtered = entries.filter(function(e){
-      if (_profFilters.papel      && e.papel  !== _profFilters.papel) return false;
-      if (_profFilters.iniciativa && e.ini    !== _profFilters.iniciativa) return false;
-      if (_profFilters.fornecedor && e.forn   !== _profFilters.fornecedor) return false;
-      if (_profFilters.status     && e.status !== _profFilters.status) return false;
-      if (nq && (e.nome.toLowerCase().indexOf(nq)===-1 && String(e.mat).toLowerCase().indexOf(nq)===-1)) return false;
-      return true;
+    // Índices de prestadores (aba PRESTADOR) — chave canônica por matrícula/nome.
+    var prByMat={}, prByNome={}, prByKey={};
+    _prestadores.forEach(function(pr){
+      var key = pr.mat ? ('M:'+String(pr.mat).trim()) : ('N:'+_normNome(pr.nome));
+      pr._key=key; prByKey[key]=pr;
+      if(pr.mat) prByMat[String(pr.mat).trim()]=pr;
+      var nk=_normNome(pr.nome); if(nk) prByNome[nk]=pr;
     });
+    function _resolveKey(mat,nome){
+      var m=String(mat||'').trim();
+      if(m && prByMat[m]) return prByMat[m]._key;
+      var nk=_normNome(nome);
+      if(prByNome[nk]) return prByNome[nk]._key;
+      return m?('M:'+m):('N:'+nk);
+    }
 
-    // Agrega por profissional (matrícula|nome)
+    // Opções dos dropdowns:
+    //  - Papel: união dos papéis da aba PRESTADOR + papéis da analítica
+    //  - Iniciativa e Fornecedor: SOMENTE da aba NOTA_FISCAL_ANALITICO
+    var papeisOpt={}, inisOpt={}, fornsOpt={};
+    _prestadores.forEach(function(pr){ if(pr.papel) papeisOpt[pr.papel]=1; });
+    entries.forEach(function(e){ if(e.papel!=='—')papeisOpt[e.papel]=1; if(e.ini!=='—')inisOpt[e.ini]=1; if(e.forn!=='—')fornsOpt[e.forn]=1; });
+    _fillSelect(document.getElementById('prof-f-papel'),      Object.keys(papeisOpt), _profFilters.papel);
+    _fillSelect(document.getElementById('prof-f-iniciativa'), Object.keys(inisOpt),   _profFilters.iniciativa);
+    _fillSelect(document.getElementById('prof-f-fornecedor'), Object.keys(fornsOpt),  _profFilters.fornecedor);
+
+    var iniA  = !!_profFilters.iniciativa;
+    var fornA = !!_profFilters.fornecedor;
+
     var profs={};
-    filtered.forEach(function(e){
-      var k=(e.mat||'')+'|'+e.nome;
-      if(!profs[k]) profs[k]={mat:e.mat,nome:e.nome,status:e.status,papeis:{},inis:{},forns:{},total:0,horas:0,nfs:0};
-      var d=profs[k];
-      d.total=R(d.total+e.total); d.horas+=e.horas; d.nfs++;
-      if(e.status && e.status!=='—') d.status=e.status;
-      if(e.papel!=='—') d.papeis[e.papel]=1;
-      if(e.ini!=='—')   d.inis[e.ini]=1;
-      if(e.forn!=='—')  d.forns[e.forn]=1;
+    function _ensure(key, seed){
+      if(!profs[key]){
+        profs[key]={mat:seed.mat||'',nome:seed.nome||'',status:seed.status||'—',papeis:{},inis:{},forns:{},total:0,horas:0,nfs:0};
+        if(seed.papel) profs[key].papeis[seed.papel]=1;
+      }
+      return profs[key];
+    }
+
+    // Universo-base: TODOS os prestadores da aba PRESTADOR.
+    // Quando há filtro analítico (iniciativa/fornecedor), a lista é restringida
+    // aos prestadores com lançamentos correspondentes (preenchidos abaixo).
+    if(!iniA && !fornA){
+      _prestadores.forEach(function(pr){
+        _ensure(pr._key, {mat:pr.mat,nome:pr.nome,status:pr.status,papel:pr.papel});
+      });
+    }
+
+    // Agrega lançamentos da analítica (iniciativa/fornecedor filtram aqui).
+    entries.forEach(function(e){
+      if(iniA  && e.ini  !== _profFilters.iniciativa) return;
+      if(fornA && e.forn !== _profFilters.fornecedor) return;
+      var key=_resolveKey(e.mat,e.nome);
+      var pr=prByKey[key];
+      var rec=_ensure(key,{mat:(pr&&pr.mat)||e.mat,nome:(pr&&pr.nome)||e.nome,status:(pr&&pr.status)||'—',papel:(pr&&pr.papel)||''});
+      rec.total=R(rec.total+e.total); rec.horas+=e.horas; rec.nfs++;
+      if(e.papel!=='—') rec.papeis[e.papel]=1;
+      if(e.ini!=='—')   rec.inis[e.ini]=1;
+      if(e.forn!=='—')  rec.forns[e.forn]=1;
     });
 
-    var sorted=Object.keys(profs).sort(function(a,b){return profs[b].total-profs[a].total;});
+    // Filtros de nível de prestador: Status, Papel e busca por nome/matrícula.
+    var nq = (_profFilters.nome||'').trim().toLowerCase();
+    var sorted=Object.keys(profs).filter(function(k){
+      var p=profs[k];
+      if(_profFilters.status && p.status!==_profFilters.status) return false;
+      if(_profFilters.papel  && !p.papeis[_profFilters.papel])  return false;
+      if(nq && (p.nome.toLowerCase().indexOf(nq)===-1 && String(p.mat).toLowerCase().indexOf(nq)===-1)) return false;
+      return true;
+    }).sort(function(a,b){return profs[b].total-profs[a].total;});
     var countEl=document.getElementById('prof-count');
     if(countEl) countEl.textContent = sorted.length+' profissiona'+(sorted.length===1?'l':'is');
 
@@ -1633,7 +1658,7 @@
         if(!res.success){SyncMonitor.update('error','Erro');return;}
         _allData=res.data||[];
         _prestadoresAtivos = res.prestadoresAtivos || 0;
-        _prestadorStatus = res.prestadorStatus || { byMat:{}, byNome:{} };
+        _prestadores = res.prestadores || [];
         _loaded=true;
         // Respeita filtros padrão do Card_Filter (Status=Autorizada, Competência=mês mais recente)
         var f = (typeof CardFilter !== 'undefined' && CardFilter.getFilters) ? CardFilter.getFilters() : null;
