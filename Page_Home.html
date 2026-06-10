@@ -306,6 +306,7 @@
   var _filteredData = [];  // dados atualmente exibidos (com filtro)
   var _loaded       = false;
   var _hdrsAttached = false;
+  var _prestadoresAtivos = 0;  // total de prestadores Ativos (aba PRESTADOR)
 
   function R(n) { return Math.round((parseFloat(n)||0)*100)/100; }
   function BRL(n){ return R(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
@@ -397,17 +398,29 @@
       avg:nA>0?R(tA/nA):0, total:data.length };
   }
 
+  // Iniciativas Ativas = ativas no FORECAST, respeitando o filtro de Iniciativa.
+  function _countIniciativasAtivas() {
+    if (typeof CardFilter === 'undefined' || typeof CardFilter.getIniciativaOptions !== 'function') return 0;
+    var opts = CardFilter.getIniciativaOptions() || [];
+    var ativos = opts.filter(function (o) { return o.active; }).map(function (o) { return o.code; });
+    var sel = (typeof CardFilter.getFilters === 'function' ? (CardFilter.getFilters().iniciativa || []) : []);
+    if (sel.length > 0) {
+      ativos = ativos.filter(function (c) { return sel.indexOf(c) !== -1; });
+    }
+    return ativos.length;
+  }
+
   function updateKpis(kpis) {
     if (typeof CardKPI==='undefined') return;
+    var nIniAtivas = _countIniciativasAtivas();
     CardKPI.update([
       {key:'total_autorizado', label:'Total Realizado',     value:BRL(kpis.tA),   sub:kpis.nA+' NFs autorizadas',  accent:'#6366f1'},
       {key:'total_cancelado',  label:'Total Cancelado',     value:BRL(kpis.tC),   sub:kpis.nC+' NFs canceladas',   accent:'#f43f5e'},
       {key:'vencendo_30dias',  label:'Vencendo em 30 dias', value:BRL(kpis.tV30), sub:kpis.nV30+' NFs',            accent:'#f59e0b'},
       {key:'vencidas',         label:'NFs Vencidas',        value:BRL(kpis.tVd),  sub:kpis.nVd+' em atraso',       accent:'#ef4444'},
-      {key:'iniciativas',      label:'Iniciativas Ativas',  value:kpis.nI,         sub:'projetos com NFs',          accent:'#10b981'},
+      {key:'iniciativas',      label:'Iniciativas Ativas',  value:nIniAtivas,      sub:'ativas no forecast',        accent:'#10b981'},
       {key:'fornecedores',     label:'Fornecedores',        value:kpis.nF,         sub:'empresas contratadas',      accent:'#06b6d4'},
-      {key:'profissionais',    label:'Profissionais',       value:kpis.nP,         sub:'colaboradores alocados',    accent:'#8b5cf6'},
-      {key:'media_nf',         label:'Custo Médio / NF',   value:BRL(kpis.avg),  sub:'valor médio autorizado',    accent:'#ec4899'}
+      {key:'profissionais',    label:'Profissionais',       value:_prestadoresAtivos, sub:'ativos na aba prestador', accent:'#8b5cf6'}
     ]);
   }
 
@@ -778,6 +791,7 @@
       .withSuccessHandler(function(res){
         if(!res.success){SyncMonitor.update('error','Erro');return;}
         _allData=res.data||[];
+        _prestadoresAtivos = res.prestadoresAtivos || 0;
         _loaded=true;
         // Respeita filtros padrão do Card_Filter (Status=Autorizada, Competência=mês mais recente)
         var f = (typeof CardFilter !== 'undefined' && CardFilter.getFilters) ? CardFilter.getFilters() : null;
