@@ -489,10 +489,15 @@ function routerGetFilterValues(sheetName, fieldKeys) {
           const fRaw     = fSheet.getRange(1, 1, fLastRow, fLastCol).getValues();
           const fHeaders = fRaw[0].map(function (h, i) { return { key: _nkF(h), i: i }; });
 
-          const FC_INI    = _fFind(fHeaders, [/inibank/, /ini_bank/, /^codigo$/, /^cod$/, /^cod_ini/, /^ini$/, /^iniciativa$/]);
+          // BLINDAGEM: detecta por cabeçalho e, se falhar, usa índice fixo de
+          // coluna (A = código da iniciativa, B = descrição). A planilha mantém
+          // essa ordem, então a detecção nunca volta vazia por mudança de nome.
+          let FC_INI    = _fFind(fHeaders, [/inibank/, /ini_bank/, /^codigo$/, /^cod$/, /^cod_ini/, /^ini$/, /^iniciativa$/]);
+          if (!FC_INI && fHeaders.length > 0) FC_INI = fHeaders[0];
           const fHdrExcIni = FC_INI ? fHeaders.filter(function (c) { return c.i !== FC_INI.i; }) : fHeaders;
-          const FC_DESC   = _fFind(fHdrExcIni, ['iniciativa_descricao', 'descricao_iniciativa', 'nome_iniciativa',
+          let FC_DESC   = _fFind(fHdrExcIni, ['iniciativa_descricao', 'descricao_iniciativa', 'nome_iniciativa',
             /iniciativa_desc/, /descricao_iniciativa/, /^descricao$/, /descr_ini/, /projeto/, /nome_projeto/, /iniciativa/]);
+          if (!FC_DESC && fHeaders.length > 1 && FC_INI && FC_INI.i === 0) FC_DESC = fHeaders[1];
           const FC_STATUS = _fFind(fHeaders, ['status', /^status/]);
 
           const activeSet = new Set();
@@ -501,8 +506,9 @@ function routerGetFilterValues(sheetName, fieldKeys) {
             const row = fRaw[r];
             const ini = FC_INI ? String(row[FC_INI.i] || '').trim() : '';
             if (!ini) continue;
+            // Sem coluna de status reconhecida → trata como Ativa (não esconde nada).
             const st = FC_STATUS ? _nkF(row[FC_STATUS.i]) : '';
-            const isActive = !st.includes('encerr') && !st.includes('cancel') && !st.includes('inativ');
+            const isActive = !FC_STATUS || (!st.includes('encerr') && !st.includes('cancel') && !st.includes('inativ'));
             if (isActive) activeSet.add(ini);
             if (!iniciativaLabels[ini]) {
               const desc = FC_DESC ? String(row[FC_DESC.i] || '').trim() : '';
@@ -520,6 +526,21 @@ function routerGetFilterValues(sheetName, fieldKeys) {
         Logger.log('[FilterValues] FORECAST: ' + iniciativaOptions.length + ' iniciativas, ' + activeIniciativas.length + ' ativas');
       } catch (e) {
         Logger.log('[FilterValues] Nao foi possivel ler FORECAST: ' + e.message);
+      }
+
+      // REDE DE SEGURANÇA: se o FORECAST não rendeu nenhuma opção (aba ausente,
+      // vazia ou cabeçalho irreconhecível), constrói as opções a partir dos
+      // valores de iniciativa da própria aba consultada — o filtro nunca fica vazio.
+      if (iniciativaOptions.length === 0 && Array.isArray(filterValues['iniciativa'])) {
+        filterValues['iniciativa'].forEach(function (code) {
+          const c = String(code || '').trim();
+          if (!c) return;
+          iniciativaLabels[c] = iniciativaLabels[c] || c;
+          iniciativaOptions.push({ code: c, label: iniciativaLabels[c], active: true });
+          activeIniciativas.push(c);
+        });
+        iniciativaOptions.sort(function (a, b) { return a.label.localeCompare(b.label, 'pt-BR'); });
+        Logger.log('[FilterValues] Fallback iniciativa via aba consultada: ' + iniciativaOptions.length + ' opcoes');
       }
     }
 

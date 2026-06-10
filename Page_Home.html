@@ -342,70 +342,110 @@
   align-self: center;
 }
 
-/* Heatmap */
-.heatmap-table {
-  border-collapse: collapse;
-  font-size: 0.72rem;
-  min-width: 100%;
+/* ===== Mapa de Calor reformulado (hx-) ===== */
+.hx-wrap { padding: 2px; }
+
+/* Faixa de insights */
+.hx-insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
 }
-.heatmap-table th {
-  padding: 6px 8px;
-  font-size: 0.63rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--c-on-surface-variant);
-  border-bottom: 1px solid var(--c-outline-variant);
-  white-space: nowrap;
-  text-align: center;
-}
-.heatmap-table th:first-child {
-  text-align: left;
-  position: sticky;
-  left: 0;
-  background: var(--c-surface);
-  z-index: 2;
-  min-width: 160px;
-  max-width: 200px;
-}
-.heatmap-table td {
-  padding: 5px 6px;
-  border-bottom: 1px solid var(--c-outline-variant);
-  border-right: 1px solid var(--c-outline-variant);
-  text-align: center;
-  white-space: nowrap;
-  min-width: 64px;
-  font-family: 'DM Mono', monospace;
-}
-.heatmap-table td:first-child {
-  text-align: left;
-  padding: 5px 10px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--c-on-surface);
-  position: sticky;
-  left: 0;
-  background: var(--c-surface);
-  z-index: 1;
-  border-right: 2px solid var(--c-outline-variant);
-  max-width: 200px;
+.hx-kpi {
+  position: relative;
+  border-radius: var(--border-radius-lg);
+  padding: 14px 16px;
+  background: var(--c-surface-cont-low);
+  border: 1px solid var(--c-outline-variant);
   overflow: hidden;
-  text-overflow: ellipsis;
 }
-.heatmap-table tr:hover td:first-child { background: var(--c-surface-cont-low); }
-.heatmap-table tfoot td {
-  font-weight: 600;
-  color: var(--c-on-surface);
-  background: var(--c-surface-cont-low);
-  border-top: 2px solid var(--c-outline-variant);
+.hx-kpi::after {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  background: var(--hx-accent, #8b5cf6);
 }
-.heatmap-table tfoot td:first-child {
-  background: var(--c-surface-cont-low);
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--c-on-surface-variant);
+.hx-kpi-label {
+  font-size: 0.64rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--c-outline);
 }
+.hx-kpi-value {
+  font-size: 1.15rem; font-weight: 800; color: var(--c-on-surface);
+  font-family: 'DM Mono', monospace; line-height: 1.2; margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hx-kpi-sub { font-size: 0.7rem; color: var(--c-outline); margin-top: 2px; }
+
+.hx-scroll { overflow-x: auto; padding-bottom: 4px; }
+
+.hx-table { border-collapse: separate; border-spacing: 3px; min-width: 100%; }
+.hx-table th {
+  font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--c-outline);
+  padding: 4px 6px; text-align: center; white-space: nowrap;
+}
+.hx-table th.hx-rowhead, .hx-table td.hx-rowhead {
+  text-align: left; position: sticky; left: 0; z-index: 2;
+  background: var(--c-surface);
+  min-width: 188px; max-width: 220px;
+}
+.hx-rowhead-inner { display: flex; align-items: center; gap: 9px; }
+.hx-dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+.hx-iname {
+  font-size: 0.78rem; font-weight: 600; color: var(--c-on-surface);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hx-icode { font-size: 0.66rem; color: var(--c-outline); font-family: 'DM Mono', monospace; }
+
+/* Células de calor */
+.hx-cell {
+  position: relative;
+  width: 58px; height: 38px;
+  border-radius: 8px;
+  text-align: center; vertical-align: middle;
+  font-family: 'DM Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  cursor: default;
+  transition: transform var(--t-fast), box-shadow var(--t-fast), outline var(--t-fast);
+  outline: 0 solid transparent;
+}
+.hx-cell:hover {
+  transform: scale(1.16);
+  box-shadow: var(--el-3);
+  z-index: 5;
+  outline: 2px solid var(--c-surface);
+}
+.hx-cell.hx-peak { box-shadow: 0 0 0 2px var(--c-surface), 0 0 0 4px #f59e0b; }
+.hx-empty { color: var(--c-outline); opacity: 0.4; }
+
+/* Coluna de tendência (sparkline) + total da linha */
+.hx-trend svg { display: block; }
+.hx-rowtotal { text-align: right; white-space: nowrap; padding-left: 6px; min-width: 150px; }
+.hx-rowtotal-bar {
+  height: 7px; border-radius: 4px; background: var(--c-surface-cont);
+  overflow: hidden; margin-top: 4px;
+}
+.hx-rowtotal-fill { height: 100%; border-radius: 4px; }
+.hx-rowtotal-val { font-family: 'DM Mono', monospace; font-weight: 700; font-size: 0.76rem; color: var(--c-on-surface); }
+
+/* Rodapé: totais mensais */
+.hx-foot td { padding-top: 8px; }
+.hx-foot .hx-rowhead { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--c-outline); font-weight: 700; }
+.hx-foot-cell {
+  text-align: center; font-family: 'DM Mono', monospace; font-size: 0.68rem; font-weight: 700;
+  color: var(--c-on-surface); padding: 6px 4px 2px; border-top: 2px solid var(--c-outline-variant);
+}
+.hx-foot-mini { height: 5px; border-radius: 3px; margin: 4px auto 0; }
+.hx-table tr.hx-row:hover td.hx-rowhead { background: var(--c-surface-cont-low); }
+
+/* Legenda de escala */
+.hx-legend { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.hx-legend-label { font-size: 0.68rem; color: var(--c-outline); font-weight: 600; }
+.hx-legend-grad {
+  height: 12px; width: 200px; border-radius: 6px;
+  background: linear-gradient(90deg, #eef2ff, #a5b4fc, #818cf8, #8b5cf6, #ec4899);
+}
+.hx-legend-peak { display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; color: var(--c-outline); }
+.hx-legend-peak::before { content: ''; width: 12px; height: 12px; border-radius: 4px; background: #fff; box-shadow: 0 0 0 2px #f59e0b; }
 </style>
 
 <div id="view-home-content">
@@ -538,31 +578,20 @@
     </div>
   </div>
 
-  <!-- Row 5: Heatmap Mês × Iniciativa -->
+  <!-- Row 5: Heatmap Mês × Iniciativa (reformulado) -->
   <div id="home-row5" class="home-section-mt" style="display:none;">
-    <div class="card">
+    <div class="card hx-card">
       <div class="card-header is-clickable" id="hdr-heatmap">
         <div>
-          <h3>Heatmap de Custos — Mês × Iniciativa</h3>
-          <div class="card-subtitle">Valor realizado por competência e projeto — clique para detalhes por iniciativa</div>
+          <h3>Mapa de Calor — Custos por Iniciativa</h3>
+          <div class="card-subtitle">Intensidade do realizado por competência · tendência e concentração — clique para detalhes</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
           <span class="material-symbols-rounded hdr-expand">open_in_full</span>
-          <div style="display:flex;align-items:center;gap:5px;font-size:0.68rem;color:var(--c-outline);">
-            <span>Menor</span>
-            <div style="display:flex;gap:2px;">
-              <div style="width:13px;height:13px;border-radius:3px;background:rgba(99,102,241,0.10);border:1px solid var(--c-outline-variant);"></div>
-              <div style="width:13px;height:13px;border-radius:3px;background:rgba(99,102,241,0.28);"></div>
-              <div style="width:13px;height:13px;border-radius:3px;background:rgba(99,102,241,0.50);"></div>
-              <div style="width:13px;height:13px;border-radius:3px;background:rgba(99,102,241,0.72);"></div>
-              <div style="width:13px;height:13px;border-radius:3px;background:rgba(99,102,241,0.92);"></div>
-            </div>
-            <span>Maior</span>
-          </div>
-          <span class="material-symbols-rounded" style="color:#6366f1;font-size:20px;">grid_view</span>
+          <span class="material-symbols-rounded" style="color:#8b5cf6;font-size:20px;">whatshot</span>
         </div>
       </div>
-      <div id="home-heatmap" style="overflow-x:auto;"></div>
+      <div id="home-heatmap"></div>
     </div>
   </div>
 
@@ -1499,24 +1528,45 @@
     el.innerHTML=h;
   }
 
-  // ── HEATMAP: MÊS × INICIATIVA ────────────────────────────────────────
+  // ── MAPA DE CALOR — MÊS × INICIATIVA (reformulado) ───────────────────
+
+  // Escala sequencial "aurora": branco-azulado → índigo → violeta → rosa.
+  function _hxScale(t) {
+    t = Math.max(0, Math.min(1, t));
+    var stops = [
+      [0.00, [238,242,255]],  // #eef2ff
+      [0.25, [165,180,252]],  // #a5b4fc
+      [0.50, [129,140,248]],  // #818cf8
+      [0.75, [139,92,246]],   // #8b5cf6
+      [1.00, [236,72,153]]    // #ec4899
+    ];
+    var i=0; while (i<stops.length-1 && t>stops[i+1][0]) i++;
+    var a=stops[i], b=stops[Math.min(i+1,stops.length-1)];
+    var span=(b[0]-a[0])||1, f=(t-a[0])/span;
+    var c=[0,1,2].map(function(j){ return Math.round(a[1][j]+(b[1][j]-a[1][j])*f); });
+    return 'rgb('+c[0]+','+c[1]+','+c[2]+')';
+  }
+  function _hxCompact(v) {
+    if (!v) return '';
+    if (v>=1e6) return (v/1e6).toFixed(1).replace('.',',')+'M';
+    if (v>=1e3) return Math.round(v/1e3)+'K';
+    return String(Math.round(v));
+  }
 
   function renderHeatmap(data) {
-    var months  = {};   // monthKey → label "JAN/24"
-    var inis    = {};   // ini → total
-    var matrix  = {};   // matrix[ini][monthKey] = value
+    var el = document.getElementById('home-heatmap'); if (!el) return;
 
+    var months={}, inis={}, descs={}, matrix={};
     data.forEach(function(row) {
       if ((row.status_nfe||'').trim()!=='Autorizada') return;
       var m = String(row.competencia||'').match(/(\d{2})\/(\d{4})/);
       if (!m) return;
       var monthKey = m[2]+'-'+m[1];
-      var monthLbl = (_MN[parseInt(m[1])-1]||m[1])+'/'+m[2].slice(2);
+      months[monthKey] = (_MN[parseInt(m[1])-1]||m[1])+'/'+m[2].slice(2);
       var ini = row.iniciativa||'N/A';
       var val = R(row.total_nfe||0);
-
-      months[monthKey]  = monthLbl;
-      inis[ini]         = R((inis[ini]||0)+val);
+      if (row.iniciativa_descricao && !descs[ini]) descs[ini]=String(row.iniciativa_descricao).trim();
+      inis[ini] = R((inis[ini]||0)+val);
       if (!matrix[ini]) matrix[ini]={};
       matrix[ini][monthKey] = R((matrix[ini][monthKey]||0)+val);
     });
@@ -1524,67 +1574,122 @@
     var sortedMonths = Object.keys(months).sort();
     var sortedInis   = Object.keys(inis).sort(function(a,b){return inis[b]-inis[a];});
 
-    var el = document.getElementById('home-heatmap'); if (!el) return;
     if (sortedInis.length===0||sortedMonths.length===0) {
-      el.innerHTML='<div class="empty-state"><span class="material-symbols-rounded">grid_off</span><p>Sem dados para o heatmap</p></div>';
+      el.innerHTML='<div class="empty-state"><span class="material-symbols-rounded">grid_off</span><p>Sem dados para o mapa de calor</p></div>';
       return;
     }
 
-    // Escala de cor
-    var allVals=[];
-    sortedInis.forEach(function(ini){ sortedMonths.forEach(function(m){ if(matrix[ini][m]) allVals.push(matrix[ini][m]); }); });
-    var maxVal = Math.max.apply(null,allVals)||1;
-
-    function heatBg(val) {
-      if (!val) return '';
-      var t = Math.pow(val/maxVal, 0.55);
-      return 'background:rgba(99,102,241,'+(0.08+t*0.84).toFixed(2)+');';
-    }
-    function heatFg(val) {
-      if (!val) return 'color:var(--c-outline);';
-      return Math.pow(val/maxVal,0.55)>0.48 ? 'color:#fff;' : 'color:var(--c-on-surface);';
-    }
-    function compact(val) {
-      if (!val) return '';
-      if (val>=1e6) return (val/1e6).toFixed(1)+'M';
-      if (val>=1e3) return (val/1e3).toFixed(0)+'K';
-      return val.toFixed(0);
-    }
-
-    // Totais mensais
-    var mTotals={};
+    // Máximos e totais
+    var maxCell=0, peakKey='', peakIni='';
+    sortedInis.forEach(function(ini){ sortedMonths.forEach(function(m){
+      var v=matrix[ini][m]||0; if(v>maxCell){maxCell=v;peakKey=m;peakIni=ini;}
+    });});
+    maxCell = maxCell||1;
+    var mTotals={}, grand=0;
     sortedMonths.forEach(function(m){
-      mTotals[m]=sortedInis.reduce(function(acc,ini){return R(acc+(matrix[ini][m]||0));},0);
+      var s=sortedInis.reduce(function(acc,ini){return R(acc+(matrix[ini][m]||0));},0);
+      mTotals[m]=s; grand=R(grand+s);
     });
-    var grandTotal=sortedInis.reduce(function(acc,k){return R(acc+inis[k]);},0);
+    var maxMonth=Math.max.apply(null,sortedMonths.map(function(m){return mTotals[m];}))||1;
+    var maxIniTot=inis[sortedInis[0]]||1;
 
-    // Build table
-    var h='<table class="heatmap-table"><thead><tr>'+
-      '<th>Iniciativa</th>';
-    sortedMonths.forEach(function(m){ h+='<th>'+E(months[m])+'</th>'; });
-    h+='<th style="text-align:right;padding:6px 10px;min-width:90px;">Total</th></tr></thead><tbody>';
+    // Mês de pico (maior total mensal) e iniciativa líder
+    var peakMonthKey=sortedMonths[0];
+    sortedMonths.forEach(function(m){ if(mTotals[m]>mTotals[peakMonthKey]) peakMonthKey=m; });
+    var nMonths=sortedMonths.length;
+    var colorOfIni={};
+    sortedInis.forEach(function(ini,i){ colorOfIni[ini]=_CL[i%_CL.length]; });
+
+    // ── Faixa de insights ────────────────────────────────────────────────
+    var leaderShare = grand ? (inis[sortedInis[0]]/grand*100) : 0;
+    var html = '<div class="hx-wrap"><div class="hx-insights">'+
+      '<div class="hx-kpi" style="--hx-accent:#8b5cf6;"><div class="hx-kpi-label">Total Realizado</div>'+
+        '<div class="hx-kpi-value">'+BRL0(grand)+'</div><div class="hx-kpi-sub">'+sortedInis.length+' iniciativas · '+nMonths+' meses</div></div>'+
+      '<div class="hx-kpi" style="--hx-accent:#f59e0b;"><div class="hx-kpi-label">Mês de Pico</div>'+
+        '<div class="hx-kpi-value">'+E(months[peakMonthKey])+'</div><div class="hx-kpi-sub">'+BRL0(mTotals[peakMonthKey])+'</div></div>'+
+      '<div class="hx-kpi" style="--hx-accent:'+colorOfIni[sortedInis[0]]+';"><div class="hx-kpi-label">Iniciativa Líder</div>'+
+        '<div class="hx-kpi-value" title="'+E(sortedInis[0])+(descs[sortedInis[0]]?' — '+descs[sortedInis[0]]:'')+'">'+E(sortedInis[0])+'</div>'+
+        '<div class="hx-kpi-sub">'+BRL0(inis[sortedInis[0]])+' · '+leaderShare.toFixed(0)+'% do total</div></div>'+
+      '<div class="hx-kpi" style="--hx-accent:#10b981;"><div class="hx-kpi-label">Média Mensal</div>'+
+        '<div class="hx-kpi-value">'+BRL0(grand/nMonths)+'</div><div class="hx-kpi-sub">por competência</div></div>'+
+    '</div>';
+
+    // ── Tabela do mapa ───────────────────────────────────────────────────
+    html += '<div class="hx-scroll"><table class="hx-table"><thead><tr>'+
+      '<th class="hx-rowhead">Iniciativa</th>';
+    sortedMonths.forEach(function(m){ html+='<th>'+E(months[m])+'</th>'; });
+    html += '<th class="hx-rowtotal" style="text-align:right;">Total &amp; tendência</th></tr></thead><tbody>';
 
     sortedInis.forEach(function(ini){
-      var iniTotal=inis[ini];
-      h+='<tr>'+
-        '<td title="'+E(ini)+'">'+E(ini.length>26?ini.substring(0,26)+'…':ini)+'</td>';
+      var rowMax=Math.max.apply(null,sortedMonths.map(function(m){return matrix[ini][m]||0;}))||1;
+      html += '<tr class="hx-row">'+
+        '<td class="hx-rowhead"><div class="hx-rowhead-inner">'+
+          '<span class="hx-dot" style="background:'+colorOfIni[ini]+'"></span>'+
+          '<span style="min-width:0;"><span class="hx-iname" title="'+E(ini)+(descs[ini]?' — '+descs[ini]:'')+'">'+E(descs[ini]||ini)+'</span>'+
+            '<br><span class="hx-icode">'+E(ini)+'</span></span>'+
+        '</div></td>';
       sortedMonths.forEach(function(m){
-        var val=matrix[ini][m]||0;
-        h+='<td style="'+heatBg(val)+heatFg(val)+'" title="'+E(ini)+' · '+E(months[m])+': '+BRL(val)+'">'+compact(val)+'</td>';
+        var v=matrix[ini][m]||0;
+        if (!v) { html+='<td><div class="hx-cell hx-empty">·</div></td>'; return; }
+        var t=Math.pow(v/maxCell,0.6);
+        var fg = t>0.5 ? '#fff' : 'var(--c-on-surface)';
+        var peak = (ini===peakIni && m===peakKey) ? ' hx-peak' : '';
+        html+='<td><div class="hx-cell'+peak+'" style="background:'+_hxScale(t)+';color:'+fg+';" '+
+          'title="'+E(ini)+' · '+E(months[m])+': '+BRL(v)+'">'+_hxCompact(v)+'</div></td>';
       });
-      h+='<td style="text-align:right;padding:5px 10px;font-family:DM Mono,monospace;font-size:0.75rem;font-weight:600;color:var(--c-primary);">'+BRL(iniTotal)+'</td>'+
-        '</tr>';
+      // Sparkline + total da linha
+      var spark = _hxSparkline(sortedMonths.map(function(m){return matrix[ini][m]||0;}), colorOfIni[ini], rowMax);
+      var barPct=Math.min(100, inis[ini]/maxIniTot*100);
+      html += '<td class="hx-rowtotal">'+
+        '<div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;">'+
+          '<span class="hx-trend">'+spark+'</span>'+
+          '<span style="min-width:84px;text-align:right;"><span class="hx-rowtotal-val">'+BRL0(inis[ini])+'</span>'+
+            '<div class="hx-rowtotal-bar"><div class="hx-rowtotal-fill" style="width:'+barPct.toFixed(0)+'%;background:'+colorOfIni[ini]+';"></div></div></span>'+
+        '</div></td>'+
+      '</tr>';
     });
 
-    h+='</tbody><tfoot><tr>'+
-      '<td>Total Mensal</td>';
+    // ── Rodapé: totais mensais com mini-barras ───────────────────────────
+    html += '</tbody><tfoot><tr class="hx-foot">'+
+      '<td class="hx-rowhead">Total Mensal</td>';
     sortedMonths.forEach(function(m){
-      h+='<td style="text-align:center;font-family:DM Mono,monospace;font-size:0.7rem;">'+compact(mTotals[m])+'</td>';
+      var pct=Math.max(8, mTotals[m]/maxMonth*100);
+      var isPeak = m===peakMonthKey;
+      html += '<td><div class="hx-foot-cell">'+_hxCompact(mTotals[m])+
+        '<div class="hx-foot-mini" style="width:'+pct.toFixed(0)+'%;background:'+(isPeak?'#f59e0b':'#8b5cf6')+';"></div></div></td>';
     });
-    h+='<td style="text-align:right;padding:5px 10px;font-family:DM Mono,monospace;font-size:0.75rem;font-weight:700;color:var(--c-primary);">'+BRL(grandTotal)+'</td>'+
-      '</tr></tfoot></table>';
+    html += '<td class="hx-rowtotal" style="vertical-align:bottom;"><span class="hx-rowtotal-val" style="font-size:0.86rem;color:var(--c-primary);">'+BRL0(grand)+'</span></td>'+
+      '</tr></tfoot></table></div>';
 
-    el.innerHTML=h;
+    // ── Legenda ──────────────────────────────────────────────────────────
+    html += '<div class="hx-legend">'+
+      '<span class="hx-legend-label">Menor</span>'+
+      '<span class="hx-legend-grad"></span>'+
+      '<span class="hx-legend-label">Maior</span>'+
+      '<span class="hx-legend-peak" style="margin-left:8px;">Maior gasto do período</span>'+
+    '</div></div>';
+
+    el.innerHTML=html;
+  }
+
+  // Mini-sparkline SVG (linha + área) para a tendência de uma iniciativa.
+  function _hxSparkline(vals, color, maxV) {
+    var W=72, H=24, n=vals.length;
+    if (n===0) return '';
+    maxV = maxV||Math.max.apply(null,vals)||1;
+    var stepX = n>1 ? W/(n-1) : W;
+    var pts = vals.map(function(v,i){
+      var x = n>1 ? i*stepX : W/2;
+      var y = H-3-(v/maxV*(H-6));
+      return [x, y];
+    });
+    var line = pts.map(function(p,i){return (i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1);}).join(' ');
+    var area = line+' L'+pts[n-1][0].toFixed(1)+' '+H+' L'+pts[0][0].toFixed(1)+' '+H+' Z';
+    var last = pts[n-1];
+    return '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'+
+      '<path d="'+area+'" fill="'+color+'" opacity="0.12"/>'+
+      '<path d="'+line+'" fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'+
+      '<circle cx="'+last[0].toFixed(1)+'" cy="'+last[1].toFixed(1)+'" r="2.2" fill="'+color+'"/></svg>';
   }
 
   // ── RENDER ALL ────────────────────────────────────────────────────────
