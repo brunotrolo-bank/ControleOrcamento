@@ -1310,9 +1310,11 @@
     if (_forecastLoaded) return;
     google.script.run
       .withSuccessHandler(function(res){
-        if (res && res.success && res.data) {
-          _forecastRows   = res.data.rows   || [];
-          _forecastMonths = res.data.months || [];
+        // _route faz Object.assign({success,metrics}, result) → os campos do
+        // resultado (rows/months) ficam no NÍVEL RAIZ, não sob res.data.
+        if (res && res.success) {
+          _forecastRows   = res.rows   || [];
+          _forecastMonths = res.months || [];
         }
         _forecastLoaded = true;
         if (_rankDim === 'iniciativa') renderRanking(_filteredData);
