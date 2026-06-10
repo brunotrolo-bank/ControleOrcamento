@@ -222,6 +222,69 @@
   overflow-x: auto;
 }
 
+/* Ranking unificado — toolbar de dimensão + métrica */
+.rank-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  padding: 4px 2px 14px;
+}
+.rank-btn-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rank-group-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--c-outline);
+  margin-right: 2px;
+}
+.rank-dim-btn, .rank-metric-btn {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--c-on-surface-variant);
+  background: var(--c-surface-cont);
+  border: 1px solid var(--c-outline-variant);
+  border-radius: 999px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.rank-dim-btn:hover, .rank-metric-btn:hover { border-color: var(--c-primary); color: var(--c-on-surface); }
+.rank-dim-btn.active {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: #fff;
+}
+.rank-metric-btn.active {
+  background: var(--c-on-surface);
+  border-color: var(--c-on-surface);
+  color: var(--c-surface);
+}
+#rank-metric-bar.is-hidden { display: none; }
+.rank-bar-track {
+  height: 6px;
+  background: var(--c-surface-cont);
+  border-radius: 4px;
+  overflow: hidden;
+  min-width: 54px;
+}
+.rank-bar-fill { height: 100%; border-radius: 4px; }
+.rank-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 0.64rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 /* Heatmap */
 .heatmap-table {
   border-collapse: collapse;
@@ -339,50 +402,35 @@
     </div>
   </div>
 
-  <!-- Row 3: Ranking Iniciativas + Ranking Fornecedores -->
-  <div id="home-row3" class="home-two-col-eq" style="display:none;">
+  <!-- Row 3: Ranking unificado (Iniciativa / Fornecedor / Prestador) -->
+  <div id="home-row3" class="home-section-mt" style="display:none;">
     <div class="card">
-      <div class="card-header is-clickable" id="hdr-rank-ini">
+      <div class="card-header is-clickable" id="hdr-ranking">
         <div>
-          <h3>Ranking de Iniciativas</h3>
-          <div class="card-subtitle">Por valor total realizado — clique para detalhes</div>
+          <h3 id="rank-card-title">Ranking de Iniciativas</h3>
+          <div class="card-subtitle" id="rank-card-subtitle">Por valor realizado — clique para detalhes</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
           <span class="material-symbols-rounded hdr-expand">open_in_full</span>
-          <span class="material-symbols-rounded" style="color:#6366f1;font-size:20px;">leaderboard</span>
+          <span class="material-symbols-rounded" id="rank-card-icon" style="color:#6366f1;font-size:20px;">leaderboard</span>
         </div>
       </div>
-      <div id="home-iniciativas" style="overflow-x:auto;"></div>
-    </div>
-    <div class="card">
-      <div class="card-header is-clickable" id="hdr-rank-forn">
-        <div>
-          <h3>Ranking de Fornecedores</h3>
-          <div class="card-subtitle">Por valor total faturado — clique para detalhes</div>
+      <div class="rank-toolbar">
+        <div class="rank-btn-group" id="rank-dim-bar">
+          <span class="rank-group-label">Dimensão:</span>
+          <button type="button" class="rank-dim-btn active" data-dim="iniciativa">Iniciativa</button>
+          <button type="button" class="rank-dim-btn" data-dim="fornecedor">Fornecedor</button>
+          <button type="button" class="rank-dim-btn" data-dim="prestador">Prestador</button>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span class="material-symbols-rounded hdr-expand">open_in_full</span>
-          <span class="material-symbols-rounded" style="color:#f59e0b;font-size:20px;">business</span>
-        </div>
-      </div>
-      <div id="home-fornecedores" style="overflow-x:auto;"></div>
-    </div>
-  </div>
-
-  <!-- Row 4: Profissionais Alocados -->
-  <div id="home-row4" class="home-section-mt" style="display:none;">
-    <div class="card">
-      <div class="card-header is-clickable" id="hdr-prof">
-        <div>
-          <h3>Profissionais Alocados</h3>
-          <div class="card-subtitle">Notas analíticas — top 15 por valor faturado — clique para detalhes</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span class="material-symbols-rounded hdr-expand">open_in_full</span>
-          <span class="material-symbols-rounded" style="color:#8b5cf6;font-size:20px;">groups</span>
+        <div class="rank-btn-group" id="rank-metric-bar">
+          <span class="rank-group-label">Métrica:</span>
+          <button type="button" class="rank-metric-btn active" data-metric="realizado">Realizado</button>
+          <button type="button" class="rank-metric-btn" data-metric="forecast">Forecast</button>
+          <button type="button" class="rank-metric-btn" data-metric="estimado">Estimado</button>
+          <button type="button" class="rank-metric-btn" data-metric="resultado">Saldo (F−R)</button>
         </div>
       </div>
-      <div id="home-profissionais" style="overflow-x:auto;"></div>
+      <div id="home-ranking" style="overflow-x:auto;"></div>
     </div>
   </div>
 
@@ -426,6 +474,11 @@
   var _prestadoresAtivos = 0;  // total de prestadores Ativos (aba PRESTADOR)
   var _evoDim = 'iniciativa';   // dimensão de divisão das barras da Evolução Mensal
   var _nfView = 'vencimentos';  // 'vencimentos' | 'vencidas'
+  var _rankDim = 'iniciativa';     // 'iniciativa' | 'fornecedor' | 'prestador'
+  var _rankMetric = 'realizado';   // (iniciativa) 'realizado' | 'forecast' | 'estimado' | 'resultado'
+  var _forecastRows   = [];   // linhas de routerGetForecastData (Forecast/Realizado/Estimado/...)
+  var _forecastMonths = [];   // labels de meses do forecast ("jun.-26")
+  var _forecastLoaded = false;
 
   function R(n) { return Math.round((parseFloat(n)||0)*100)/100; }
   function BRL(n){ return R(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
@@ -470,9 +523,6 @@
       ['hdr-evolucao',   'evolucao_mensal', 'Evolução Mensal de Custos'],
       ['hdr-ini-bar',    'iniciativa',      'Distribuição por Iniciativa'],
       ['hdr-vencimentos','summary',         'Resumo — Vencimentos'],
-      ['hdr-rank-ini',   'iniciativa',      'Ranking de Iniciativas'],
-      ['hdr-rank-forn',  'fornecedor',      'Ranking de Fornecedores'],
-      ['hdr-prof',       'prestador',       'Profissionais Alocados'],
       ['hdr-heatmap',    'iniciativa',      'Heatmap — Detalhe por Iniciativa'],
     ];
     map.forEach(function(cfg) {
@@ -494,6 +544,45 @@
         _evoDim = btn.dataset.dim;
         evoTb.querySelectorAll('.evo-dim-btn').forEach(function(b){ b.classList.toggle('active', b === btn); });
         renderEvolucao(_filteredData);
+      });
+    }
+
+    // Cabeçalho do Ranking unificado abre a sidebar da dimensão ativa
+    var hdrRank = document.getElementById('hdr-ranking');
+    if (hdrRank) {
+      hdrRank.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (_rankDim === 'fornecedor')      _openTab('fornecedor', 'Ranking de Fornecedores');
+        else if (_rankDim === 'prestador')  _openTab('prestador', 'Profissionais Alocados');
+        else                                _openTab('iniciativa', 'Ranking de Iniciativas');
+      });
+    }
+
+    // Toolbar do Ranking: dimensão (iniciativa/fornecedor/prestador)
+    var rankDimBar = document.getElementById('rank-dim-bar');
+    if (rankDimBar) {
+      rankDimBar.addEventListener('click', function(e) {
+        var btn = e.target.closest ? e.target.closest('.rank-dim-btn') : null;
+        if (!btn) return;
+        e.stopPropagation();
+        _rankDim = btn.dataset.dim;
+        rankDimBar.querySelectorAll('.rank-dim-btn').forEach(function(b){ b.classList.toggle('active', b === btn); });
+        _updateRankMeta();
+        renderRanking(_filteredData);
+      });
+    }
+
+    // Toolbar do Ranking: métrica (somente Iniciativa)
+    var rankMetricBar = document.getElementById('rank-metric-bar');
+    if (rankMetricBar) {
+      rankMetricBar.addEventListener('click', function(e) {
+        var btn = e.target.closest ? e.target.closest('.rank-metric-btn') : null;
+        if (!btn) return;
+        e.stopPropagation();
+        _rankMetric = btn.dataset.metric;
+        rankMetricBar.querySelectorAll('.rank-metric-btn').forEach(function(b){ b.classList.toggle('active', b === btn); });
+        _updateRankMeta();
+        renderRanking(_filteredData);
       });
     }
 
@@ -865,67 +954,203 @@
     el.innerHTML=h;
   }
 
-  // ── TABLE: RANKING INICIATIVAS ────────────────────────────────────────
+  // ── RANKING UNIFICADO (Iniciativa / Fornecedor / Prestador) ──────────
 
-  function renderIniciativas(data) {
-    var inis={};
-    data.forEach(function(row){
-      if((row.status_nfe||'').trim()!=='Autorizada') return;
-      var n=row.iniciativa||'N/A', desc=row.iniciativa_descricao||'';
-      if(!inis[n]) inis[n]={total:0,qtd:0,desc:desc};
-      inis[n].total=R(inis[n].total+R(row.total_nfe||0)); inis[n].qtd++;
-    });
-    var sorted=Object.keys(inis).sort(function(a,b){return inis[b].total-inis[a].total;});
-    var el=document.getElementById('home-iniciativas'); if(!el) return;
-    if(sorted.length===0){el.innerHTML='<div class="empty-state"><span class="material-symbols-rounded">folder_off</span><p>Sem dados</p></div>';return;}
-    var tot=sorted.reduce(function(acc,k){return R(acc+inis[k].total);},0);
-    var h='<table class="home-table"><thead><tr><th>#</th><th>Iniciativa</th><th style="text-align:right;">NFs</th><th style="text-align:right;">Total</th><th style="text-align:right;">Part.</th></tr></thead><tbody>';
-    sorted.forEach(function(nome,i){
-      var d=inis[nome], pct=((d.total/tot)*100).toFixed(1), c=_CL[i%_CL.length];
-      h+='<tr>'+
-        '<td><span class="home-rank-badge" style="background:'+c+';">'+(i+1)+'</span></td>'+
-        '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;" title="'+E(nome)+(d.desc?' — '+d.desc:'')+'">'+E(nome)+'</td>'+
-        '<td class="col-mono" style="text-align:right;font-size:0.75rem;">'+d.qtd+'</td>'+
-        '<td class="col-valor" style="text-align:right;font-size:0.78rem;">'+BRL(d.total)+'</td>'+
-        '<td style="text-align:right;"><span style="font-size:0.7rem;font-weight:700;color:'+c+';">'+pct+'%</span></td>'+
-        '</tr>';
-    });
-    h+='</tbody></table>';
-    el.innerHTML=h;
+  // Atualiza título, subtítulo, ícone do card e visibilidade da barra de métrica.
+  function _updateRankMeta() {
+    var title = document.getElementById('rank-card-title');
+    var sub   = document.getElementById('rank-card-subtitle');
+    var icon  = document.getElementById('rank-card-icon');
+    var mBar  = document.getElementById('rank-metric-bar');
+    var META = {
+      iniciativa: { t:'Ranking de Iniciativas', i:'leaderboard', c:'#6366f1' },
+      fornecedor: { t:'Ranking de Fornecedores', i:'business',   c:'#f59e0b' },
+      prestador:  { t:'Ranking de Prestadores',  i:'groups',     c:'#8b5cf6' }
+    };
+    var METRIC_SUB = {
+      realizado: 'Iniciativas ordenadas por valor realizado (NFs autorizadas)',
+      forecast:  'Iniciativas ordenadas por valor previsto no Forecast',
+      estimado:  'Iniciativas ordenadas por valor Estimado (meses futuros)',
+      resultado: 'Iniciativas ordenadas pelo saldo Forecast − Realizado'
+    };
+    var m = META[_rankDim] || META.iniciativa;
+    if (title) title.textContent = m.t;
+    if (icon)  { icon.textContent = m.i; icon.style.color = m.c; }
+    if (mBar)  mBar.classList.toggle('is-hidden', _rankDim !== 'iniciativa');
+    if (sub) {
+      if (_rankDim === 'iniciativa') sub.textContent = METRIC_SUB[_rankMetric] || METRIC_SUB.realizado;
+      else if (_rankDim === 'fornecedor') sub.textContent = 'Empresas ordenadas por valor faturado — NFs, ticket médio e nº de iniciativas';
+      else sub.textContent = 'Profissionais das notas analíticas — horas, H/H e valor faturado';
+    }
   }
 
-  // ── TABLE: RANKING FORNECEDORES ───────────────────────────────────────
+  // Converte label de mês do forecast ("jun.-26") para o formato do filtro ("JUN/2026").
+  function _fcLabelToComp(label) {
+    var m = String(label).toLowerCase().match(/^([a-z]{3})\.?-?(\d{2})$/);
+    if (!m) return '';
+    var idx = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'].indexOf(m[1]);
+    if (idx < 0) return '';
+    return _MN[idx] + '/20' + m[2];
+  }
 
-  function renderFornecedores(data) {
-    var forns={};
+  // Constrói mapa por iniciativa a partir do forecast, respeitando filtros de
+  // iniciativa e competência (soma apenas meses selecionados quando houver).
+  function _buildForecastByIni() {
+    var f = (typeof CardFilter !== 'undefined' && CardFilter.getFilters) ? (CardFilter.getFilters() || {}) : {};
+    var selIni  = f.iniciativa || [];
+    var selComp = f.competencia || [];
+    var map = {};
+    _forecastRows.forEach(function(r) {
+      if (selIni.length && selIni.indexOf(r.inibank) === -1) return;
+      if (!map[r.inibank]) {
+        map[r.inibank] = { inibank:r.inibank, desc:r.iniciativa||'', status:r.status||'Ativa',
+                           forecast:0, realizado:0, resultado:0, fa:0, estimado:0 };
+      }
+      var val;
+      if (selComp.length && r._monthly) {
+        val = 0;
+        _forecastMonths.forEach(function(ml) {
+          if (selComp.indexOf(_fcLabelToComp(ml)) !== -1) val += (r._monthly[ml] || 0);
+        });
+      } else {
+        val = r.projecao_2026 || 0;
+      }
+      var key = r.tipo === 'Forecast' ? 'forecast'
+              : r.tipo === 'Realizado' ? 'realizado'
+              : r.tipo === 'Resultado' ? 'resultado'
+              : r.tipo === 'Forecast Ajustado' ? 'fa'
+              : r.tipo === 'Estimado' ? 'estimado' : null;
+      if (key) map[r.inibank][key] = R(map[r.inibank][key] + val);
+    });
+    return map;
+  }
+
+  function _rankEl() { return document.getElementById('home-ranking'); }
+  function _rankEmpty(icon, msg) {
+    var el = _rankEl(); if (!el) return;
+    el.innerHTML = '<div class="empty-state"><span class="material-symbols-rounded">'+icon+'</span><p>'+E(msg)+'</p></div>';
+  }
+
+  function renderRanking(data) {
+    if (_rankDim === 'fornecedor') return renderRankFornecedor(data);
+    if (_rankDim === 'prestador')  return renderRankPrestador(data);
+    return renderRankIniciativa(data);
+  }
+
+  // ── Ranking: INICIATIVA (Forecast / Realizado / Estimado / Saldo) ─────
+  function renderRankIniciativa(data) {
+    var el = _rankEl(); if (!el) return;
+    if (!_forecastLoaded) { el.innerHTML='<div style="padding:24px;text-align:center;color:var(--c-outline);">Carregando dados de forecast...</div>'; return; }
+
+    var map = _buildForecastByIni();
+    var keys = Object.keys(map);
+    if (keys.length === 0) { _rankEmpty('folder_off','Sem dados de iniciativas'); return; }
+
+    var metric = _rankMetric;  // realizado|forecast|estimado|resultado
+    function mv(d) { return d[metric] || 0; }
+    var sorted = keys.sort(function(a,b){ return mv(map[b]) - mv(map[a]); });
+    var maxAbs = sorted.reduce(function(s,k){ return Math.max(s, Math.abs(mv(map[k]))); }, 0) || 1;
+    var totMetric = sorted.reduce(function(s,k){ return R(s + mv(map[k])); }, 0) || 1;
+
+    var h = '<table class="home-table"><thead><tr>'+
+      '<th>#</th><th>Iniciativa</th>'+
+      '<th style="text-align:right;">Forecast</th>'+
+      '<th style="text-align:right;">Realizado</th>'+
+      '<th style="text-align:right;">Estimado</th>'+
+      '<th style="text-align:right;">Consumo</th>'+
+      '<th style="min-width:90px;">'+E(_metricLabel(metric))+'</th>'+
+      '</tr></thead><tbody>';
+
+    sorted.forEach(function(k,i){
+      var d = map[k], c = _CL[i%_CL.length];
+      var val = mv(d);
+      var pctTot = totMetric ? (val/totMetric*100) : 0;
+      var barPct = Math.min(100, Math.abs(val)/maxAbs*100);
+      var consumo = d.forecast ? (d.realizado/d.forecast*100) : 0;
+      var consColor = consumo > 100 ? 'var(--c-error)' : consumo >= 80 ? 'var(--c-warning)' : 'var(--c-success,#10b981)';
+      var stPill = d.status === 'Ativa'
+        ? '<span class="rank-pill" style="background:rgba(16,185,129,0.14);color:#10b981;">Ativa</span>'
+        : '<span class="rank-pill" style="background:var(--c-surface-cont);color:var(--c-outline);">Encerrada</span>';
+      var label = E(k) + (d.desc ? ' <span style="color:var(--c-outline);font-weight:400;">— '+E(d.desc)+'</span>' : '');
+      h += '<tr>'+
+        '<td><span class="home-rank-badge" style="background:'+c+';">'+(i+1)+'</span></td>'+
+        '<td style="max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;" title="'+E(k)+(d.desc?' — '+d.desc:'')+'">'+label+' '+stPill+'</td>'+
+        '<td class="col-valor" style="text-align:right;font-size:0.76rem;'+(metric==='forecast'?'font-weight:800;':'')+'">'+BRL0(d.forecast)+'</td>'+
+        '<td class="col-valor" style="text-align:right;font-size:0.76rem;'+(metric==='realizado'?'font-weight:800;':'')+'">'+BRL0(d.realizado)+'</td>'+
+        '<td class="col-valor" style="text-align:right;font-size:0.76rem;'+(metric==='estimado'?'font-weight:800;':'')+'">'+BRL0(d.estimado)+'</td>'+
+        '<td style="text-align:right;"><span style="font-size:0.72rem;font-weight:700;color:'+consColor+';font-family:DM Mono,monospace;" title="Realizado / Forecast">'+(d.forecast?consumo.toFixed(0)+'%':'—')+'</span></td>'+
+        '<td><div style="display:flex;align-items:center;gap:7px;">'+
+            '<div class="rank-bar-track"><div class="rank-bar-fill" style="width:'+barPct.toFixed(0)+'%;background:'+c+';"></div></div>'+
+            '<span style="font-size:0.7rem;font-weight:700;color:'+c+';font-family:DM Mono,monospace;min-width:42px;text-align:right;">'+pctTot.toFixed(1)+'%</span>'+
+          '</div></td>'+
+        '</tr>';
+    });
+
+    // Linha de total
+    var tF=0,tR=0,tE=0;
+    sorted.forEach(function(k){ tF=R(tF+map[k].forecast); tR=R(tR+map[k].realizado); tE=R(tE+map[k].estimado); });
+    var tCons = tF ? (tR/tF*100) : 0;
+    h += '</tbody><tfoot><tr style="font-weight:700;background:var(--c-surface-cont-low);">'+
+      '<td></td><td style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--c-on-surface-variant);">Total ('+sorted.length+')</td>'+
+      '<td class="col-valor" style="text-align:right;font-size:0.76rem;">'+BRL0(tF)+'</td>'+
+      '<td class="col-valor" style="text-align:right;font-size:0.76rem;">'+BRL0(tR)+'</td>'+
+      '<td class="col-valor" style="text-align:right;font-size:0.76rem;">'+BRL0(tE)+'</td>'+
+      '<td style="text-align:right;font-size:0.72rem;font-family:DM Mono,monospace;">'+(tF?tCons.toFixed(0)+'%':'—')+'</td>'+
+      '<td></td></tr></tfoot></table>';
+    el.innerHTML = h;
+  }
+
+  function _metricLabel(m) {
+    return m==='forecast' ? 'Part. Forecast'
+         : m==='estimado' ? 'Part. Estimado'
+         : m==='resultado' ? 'Part. Saldo'
+         : 'Part. Realizado';
+  }
+
+  // ── Ranking: FORNECEDOR ───────────────────────────────────────────────
+  function renderRankFornecedor(data) {
+    var el = _rankEl(); if (!el) return;
+    var forns = {};
     data.forEach(function(row){
       if((row.status_nfe||'').trim()!=='Autorizada') return;
       var n=row.nome_fantasia||'N/A';
-      if(!forns[n]) forns[n]={total:0,qtd:0};
-      forns[n].total=R(forns[n].total+R(row.total_nfe||0)); forns[n].qtd++;
+      if(!forns[n]) forns[n]={total:0,qtd:0,inis:{}};
+      forns[n].total=R(forns[n].total+R(row.total_nfe||0));
+      forns[n].qtd++;
+      if(row.iniciativa) forns[n].inis[row.iniciativa]=1;
     });
     var sorted=Object.keys(forns).sort(function(a,b){return forns[b].total-forns[a].total;});
-    var el=document.getElementById('home-fornecedores'); if(!el) return;
-    if(sorted.length===0){el.innerHTML='<div class="empty-state"><span class="material-symbols-rounded">business_off</span><p>Sem dados</p></div>';return;}
+    if(sorted.length===0){ _rankEmpty('business_off','Sem dados de fornecedores'); return; }
     var tot=sorted.reduce(function(acc,k){return R(acc+forns[k].total);},0);
-    var h='<table class="home-table"><thead><tr><th>#</th><th>Fornecedor</th><th style="text-align:right;">NFs</th><th style="text-align:right;">Total</th><th style="text-align:right;">Part.</th></tr></thead><tbody>';
+    var maxV=forns[sorted[0]].total||1;
+    var h='<table class="home-table"><thead><tr><th>#</th><th>Fornecedor</th>'+
+      '<th style="text-align:right;">NFs</th><th style="text-align:right;">Inic.</th>'+
+      '<th style="text-align:right;">Ticket médio</th><th style="text-align:right;">Total</th>'+
+      '<th style="min-width:90px;">Part.</th></tr></thead><tbody>';
     sorted.forEach(function(nome,i){
-      var d=forns[nome], pct=((d.total/tot)*100).toFixed(1), c=_CL[i%_CL.length];
+      var d=forns[nome], pct=((d.total/tot)*100), c=_CL[i%_CL.length];
+      var ticket=d.qtd?d.total/d.qtd:0, nInis=Object.keys(d.inis).length;
+      var barPct=Math.min(100, d.total/maxV*100);
       h+='<tr>'+
         '<td><span class="home-rank-badge" style="background:'+c+';">'+(i+1)+'</span></td>'+
-        '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;" title="'+E(nome)+'">'+E(nome)+'</td>'+
+        '<td style="max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;" title="'+E(nome)+'">'+E(nome)+'</td>'+
         '<td class="col-mono" style="text-align:right;font-size:0.75rem;">'+d.qtd+'</td>'+
-        '<td class="col-valor" style="text-align:right;font-size:0.78rem;">'+BRL(d.total)+'</td>'+
-        '<td style="text-align:right;"><span style="font-size:0.7rem;font-weight:700;color:'+c+';">'+pct+'%</span></td>'+
+        '<td class="col-mono" style="text-align:right;font-size:0.75rem;">'+nInis+'</td>'+
+        '<td class="col-valor" style="text-align:right;font-size:0.75rem;color:var(--c-outline);">'+BRL0(ticket)+'</td>'+
+        '<td class="col-valor" style="text-align:right;font-size:0.78rem;font-weight:700;">'+BRL0(d.total)+'</td>'+
+        '<td><div style="display:flex;align-items:center;gap:7px;">'+
+            '<div class="rank-bar-track"><div class="rank-bar-fill" style="width:'+barPct.toFixed(0)+'%;background:'+c+';"></div></div>'+
+            '<span style="font-size:0.7rem;font-weight:700;color:'+c+';font-family:DM Mono,monospace;min-width:42px;text-align:right;">'+pct.toFixed(1)+'%</span>'+
+          '</div></td>'+
         '</tr>';
     });
     h+='</tbody></table>';
     el.innerHTML=h;
   }
 
-  // ── TABLE: PROFISSIONAIS ──────────────────────────────────────────────
-
-  function renderProfissionais(data) {
+  // ── Ranking: PRESTADOR ────────────────────────────────────────────────
+  function renderRankPrestador(data) {
+    var el = _rankEl(); if (!el) return;
     var profs={};
     data.forEach(function(row){
       if((row.status_nfe||'').trim()!=='Autorizada') return;
@@ -939,24 +1164,32 @@
         profs[k].nfs++;
       });
     });
-    var sorted=Object.keys(profs).sort(function(a,b){return profs[b].total-profs[a].total;}).slice(0,15);
-    var el=document.getElementById('home-profissionais'); if(!el) return;
-    if(sorted.length===0){el.innerHTML='<div class="empty-state"><span class="material-symbols-rounded">group_off</span><p>Nenhum profissional nas notas analíticas</p></div>';return;}
+    var sorted=Object.keys(profs).sort(function(a,b){return profs[b].total-profs[a].total;});
+    if(sorted.length===0){ _rankEmpty('group_off','Nenhum profissional nas notas analíticas'); return; }
+    var tot=sorted.reduce(function(acc,k){return R(acc+profs[k].total);},0);
+    var maxV=profs[sorted[0]].total||1;
     var h='<table class="home-table"><thead><tr>'+
-      '<th>Matrícula</th><th>Profissional</th><th>Papel</th>'+
+      '<th>#</th><th>Matrícula</th><th>Profissional</th><th>Papel</th>'+
       '<th style="text-align:right;">NFs</th><th style="text-align:right;">Horas</th>'+
       '<th style="text-align:right;">H/H</th><th style="text-align:right;">Total</th>'+
+      '<th style="min-width:80px;">Part.</th>'+
       '</tr></thead><tbody>';
-    sorted.forEach(function(key){
-      var p=profs[key];
+    sorted.forEach(function(key,i){
+      var p=profs[key], c=_CL[i%_CL.length];
+      var pct=tot?(p.total/tot*100):0, barPct=Math.min(100, p.total/maxV*100);
       h+='<tr>'+
+        '<td><span class="home-rank-badge" style="background:'+c+';">'+(i+1)+'</span></td>'+
         '<td class="col-mono" style="font-size:0.72rem;color:var(--c-outline);">'+E(p.mat)+'</td>'+
         '<td style="font-weight:600;font-size:0.82rem;white-space:nowrap;">'+E(p.nome)+'</td>'+
         '<td style="color:var(--c-outline);font-size:0.75rem;white-space:nowrap;">'+E(p.papel)+'</td>'+
         '<td class="col-mono" style="text-align:right;font-size:0.75rem;">'+p.nfs+'</td>'+
         '<td class="col-mono" style="text-align:right;font-size:0.75rem;">'+p.horas.toFixed(1)+'h</td>'+
         '<td class="col-mono" style="text-align:right;font-size:0.75rem;">'+BRL(p.hh)+'</td>'+
-        '<td class="col-valor" style="text-align:right;font-size:0.78rem;">'+BRL(p.total)+'</td>'+
+        '<td class="col-valor" style="text-align:right;font-size:0.78rem;font-weight:700;">'+BRL0(p.total)+'</td>'+
+        '<td><div style="display:flex;align-items:center;gap:7px;">'+
+            '<div class="rank-bar-track"><div class="rank-bar-fill" style="width:'+barPct.toFixed(0)+'%;background:'+c+';"></div></div>'+
+            '<span style="font-size:0.68rem;font-weight:700;color:'+c+';font-family:DM Mono,monospace;min-width:38px;text-align:right;">'+pct.toFixed(1)+'%</span>'+
+          '</div></td>'+
         '</tr>';
     });
     h+='</tbody></table>';
@@ -1061,16 +1294,31 @@
     var kpis = calcKpis(data);
     updateKpis(kpis);
 
-    ['home-row1','home-row2','home-row3','home-row4','home-row5'].forEach(function(id){
+    ['home-row1','home-row2','home-row3','home-row5'].forEach(function(id){
       var el=document.getElementById(id); if(el) el.style.display='';
     });
 
+    _updateRankMeta();
     renderEvolucao(data);
     renderNfActive(data);
-    renderIniciativas(data);
-    renderFornecedores(data);
-    renderProfissionais(data);
+    renderRanking(data);
     renderHeatmap(data);
+  }
+
+  // Carrega o forecast (Forecast/Realizado/Estimado por iniciativa) sob demanda.
+  function loadForecast() {
+    if (_forecastLoaded) return;
+    google.script.run
+      .withSuccessHandler(function(res){
+        if (res && res.success && res.data) {
+          _forecastRows   = res.data.rows   || [];
+          _forecastMonths = res.data.months || [];
+        }
+        _forecastLoaded = true;
+        if (_rankDim === 'iniciativa') renderRanking(_filteredData);
+      })
+      .withFailureHandler(function(){ _forecastLoaded = true; })
+      .routerGetForecastData();
   }
 
   // ── LOAD ──────────────────────────────────────────────────────────────
@@ -1088,6 +1336,7 @@
         // Respeita filtros padrão do Card_Filter (Status=Autorizada, Competência=mês mais recente)
         var f = (typeof CardFilter !== 'undefined' && CardFilter.getFilters) ? CardFilter.getFilters() : null;
         renderAll(f ? applyFilters(_allData, f) : _allData);
+        loadForecast();
         SyncMonitor.update('success','Carregado',{
           gas:res.metrics?res.metrics.executionTime:0,
           cpu:performance.now()-t0
