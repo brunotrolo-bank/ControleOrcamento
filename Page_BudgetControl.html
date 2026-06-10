@@ -146,6 +146,41 @@
   color: var(--c-tertiary, #d97706) !important;
 }
 
+.bc-status-toggle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--c-surface-cont-low);
+  border: 1px solid var(--c-outline-variant);
+  border-radius: var(--border-radius-sm);
+  padding: 2px;
+}
+
+.bc-status-btn {
+  border: none;
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--c-outline);
+  padding: 5px 10px;
+  border-radius: calc(var(--border-radius-sm) - 2px);
+  cursor: pointer;
+  transition: all var(--t-fast);
+  white-space: nowrap;
+}
+
+.bc-status-btn.active {
+  background: var(--c-surface);
+  color: var(--c-on-surface);
+  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+}
+
+.bc-status-btn[data-status="Ativa"].active { color: #059669; }
+.bc-status-btn[data-status="Encerrada"].active { color: #dc2626; }
+.bc-status-btn[data-status=""].active { color: var(--c-primary); }
+
 .bc-table-wrap {
   overflow-x: auto;
   border-radius: var(--border-radius-md);
@@ -367,6 +402,11 @@
       <span class="material-symbols-rounded" style="font-size:18px;color:var(--c-outline);flex-shrink:0">search</span>
       <input id="bc-search" type="text" placeholder="Buscar iniciativa ou código...">
     </div>
+    <div class="bc-status-toggle" id="bc-status-toggle">
+      <button class="bc-status-btn active" data-status="Ativa">Ativas</button>
+      <button class="bc-status-btn" data-status="Encerrada">Encerradas</button>
+      <button class="bc-status-btn" data-status="">Todas</button>
+    </div>
     <div class="bc-mes-ref-wrap">
       <label for="bc-mes-ref">Mês ref.:</label>
       <select id="bc-mes-ref"><option value="">Carregando...</option></select>
@@ -398,6 +438,13 @@ window.BudgetControl = (function () {
   var _search    = '';
   var _filterIni   = [];  // active initiative filter from Card_Filter
   var _mesReferencia = '';  // label "jan.-26" do mês de referência para Forecast Ajustado
+  var _statusFilter  = ['Ativa'];  // padrão: só Ativas; '' = todas
+
+  function _normStatus(s) {
+    var k = String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (k.includes('encerr') || k.includes('cancel') || k.includes('inativ')) return 'Encerrada';
+    return 'Ativa';
+  }
 
   var TIPO_ORDER = ['Forecast', 'Realizado', 'Resultado', 'Forecast Ajustado'];
   var TIPO_ITEMS = { 'Forecast': 'A', 'Realizado': 'B', 'Resultado': 'A-B=C', 'Forecast Ajustado': 'FA' };
@@ -450,11 +497,13 @@ window.BudgetControl = (function () {
       var tipo       = _normTipo(r.tipo || '');
       var key        = inibank;
 
+      var status = _normStatus(r.status || '');
       if (!map[key]) {
-        map[key] = { inibank: inibank, iniciativa: iniciativa, tipoRows: {} };
+        map[key] = { inibank: inibank, iniciativa: iniciativa, status: status, tipoRows: {} };
         order.push(key);
       }
       if (!map[key].iniciativa && iniciativa) map[key].iniciativa = iniciativa;
+      if (status === 'Ativa') map[key].status = 'Ativa';  // Ativa tem precedência
 
       var projecao = _R(r.projecao_2026 !== undefined ? r.projecao_2026 : 0);
       // if projecao is zero, try summing monthly values
@@ -497,7 +546,9 @@ window.BudgetControl = (function () {
           return g.inibank.toLowerCase().includes(f.toLowerCase()) ||
                  g.iniciativa.toLowerCase().includes(f.toLowerCase());
         });
-      return matchSearch && matchIni;
+      var matchStatus = _statusFilter.length === 0 ||
+        _statusFilter.indexOf(g.status || 'Ativa') !== -1;
+      return matchSearch && matchIni && matchStatus;
     });
   }
 
@@ -745,6 +796,18 @@ window.BudgetControl = (function () {
       _mesReferencia = e.target.value;
       _loaded = false;
       _load();
+    });
+
+    document.getElementById('bc-status-toggle').addEventListener('click', function (e) {
+      var btn = e.target.closest('.bc-status-btn');
+      if (!btn) return;
+      document.querySelectorAll('#bc-status-toggle .bc-status-btn').forEach(function (b) {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
+      var val = btn.dataset.status;
+      _statusFilter = val === '' ? [] : [val];
+      _render();
     });
 
     document.getElementById('bc-search').addEventListener('input', function (e) {

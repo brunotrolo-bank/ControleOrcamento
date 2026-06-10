@@ -448,7 +448,29 @@ function routerGetFilterValues(sheetName, fieldKeys) {
       }
     });
 
-    return { filterValues };
+    // Lê a aba FORECAST para saber quais iniciativas estao Ativas
+    // Usada pelo Card_Filter para pre-selecionar apenas Ativas no picklist de Iniciativa
+    const activeIniciativas = [];
+    if (fieldKeys.indexOf('iniciativa') !== -1) {
+      try {
+        const forecastRows = fetchAll(ALLOWED_SHEETS.FORECAST);
+        const activeSet = new Set();
+        forecastRows.forEach(fr => {
+          const ini = String(fr.iniciativa || '').trim();
+          if (!ini) return;
+          const st = String(fr.status || '').trim().toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          if (!st.includes('encerr') && !st.includes('cancel') && !st.includes('inativ')) {
+            activeSet.add(ini);
+          }
+        });
+        activeSet.forEach(v => activeIniciativas.push(v));
+      } catch(e) {
+        Logger.log('[FilterValues] Nao foi possivel ler status de FORECAST: ' + e.message);
+      }
+    }
+
+    return { filterValues, activeIniciativas };
   });
 }
 
@@ -545,13 +567,16 @@ function routerGetForecastData(mesReferencia) {
     );
 
     // C_DIR detecta a coluna de direcao (Soma / Subtracao) para filtrar linhas de ajuste
-    const C_DIR  = _findCol('iniciativa_direcao', 'direcao', /^direcao/, /^dir_/);
-    const C_ITEM = _findCol('item', 'letra', 'codigo_tipo', 'cod_tipo', /item$/);
-    const C_PROJ = _findCol(/^projecao/, /^projec/, /^total_forecast$/, /^orcamento/, /^budget/, /^total/);
+    const C_DIR    = _findCol('iniciativa_direcao', 'direcao', /^direcao/, /^dir_/);
+    // C_STATUS detecta a coluna de status da iniciativa (Ativa / Encerrada)
+    const C_STATUS = _findCol('status', /^status/);
+    const C_ITEM   = _findCol('item', 'letra', 'codigo_tipo', 'cod_tipo', /item$/);
+    const C_PROJ   = _findCol(/^projecao/, /^projec/, /^total_forecast$/, /^orcamento/, /^budget/, /^total/);
 
     Logger.log('[ForecastData] cols: ini=' + (C_INI&&C_INI.rawHeader) +
                ' desc=' + (C_DESC&&C_DESC.rawHeader) +
                ' dir=' + (C_DIR&&C_DIR.rawHeader) +
+               ' status=' + (C_STATUS&&C_STATUS.rawHeader) +
                ' proj=' + (C_PROJ&&C_PROJ.rawHeader));
 
     function _str(col) {
@@ -562,11 +587,18 @@ function routerGetForecastData(mesReferencia) {
       };
     }
 
-    const getIni  = _str(C_INI);
-    const getDesc = _str(C_DESC);
-    const getItem = _str(C_ITEM);
+    const getIni    = _str(C_INI);
+    const getDesc   = _str(C_DESC);
+    const getItem   = _str(C_ITEM);
+    const getStatus = _str(C_STATUS);
 
-    // forecastMap: { inibank → { desc, item, monthly: {label→val}, projecao } }
+    function _normStatus(s) {
+      const k = _nk(s);
+      if (k.includes('encerrr') || k.includes('encerr') || k.includes('cancel') || k.includes('inativ')) return 'Encerrada';
+      return 'Ativa';
+    }
+
+    // forecastMap: { inibank → { desc, item, status, monthly: {label→val}, projecao } }
     const forecastMap = {};
     const inibankOrder = [];
 
@@ -584,6 +616,7 @@ function routerGetForecastData(mesReferencia) {
       if (inibank === '—') continue;  // pula linhas sem codigo de iniciativa
       const desc    = getDesc(row);
       const item    = getItem(row);
+      const status  = _normStatus(getStatus(row));
 
       const monthly = {};
       cols.filter(c => c.kind === 'month').forEach(c => { monthly[c.label] = _num(row[c.i]); });
@@ -592,7 +625,7 @@ function routerGetForecastData(mesReferencia) {
       if (projecao === 0) projecao = Object.values(monthly).reduce((s, v) => s + v, 0);
 
       if (!forecastMap[inibank]) {
-        forecastMap[inibank] = { desc: desc || '', item: item || '', monthly: {}, projecao: 0 };
+        forecastMap[inibank] = { desc: desc || '', item: item || '', status: status, monthly: {}, projecao: 0 };
         months.forEach(m => { forecastMap[inibank].monthly[m] = 0; });
         inibankOrder.push(inibank);
       }
@@ -602,6 +635,8 @@ function routerGetForecastData(mesReferencia) {
       });
       forecastMap[inibank].projecao += projecao;
       if (!forecastMap[inibank].desc && desc) forecastMap[inibank].desc = desc;
+      // Atualiza status: se qualquer linha indicar Ativa, a iniciativa e Ativa
+      if (status === 'Ativa') forecastMap[inibank].status = 'Ativa';
     }
 
     Logger.log('[ForecastData] FORECAST: ' + inibankOrder.length + ' iniciativas, meses=' + months.length);
@@ -703,17 +738,20 @@ function routerGetForecastData(mesReferencia) {
       }
       const faProj = months.reduce((s, m) => s + faMonthly[m], 0);
 
+      const status = fData.status || 'Ativa';
       rows.push(
-        { inibank, iniciativa: fData.desc, tipo: 'Forecast',          item: 'A',     projecao_2026: fProj,   _monthly: fMonthly   },
-        { inibank, iniciativa: fData.desc, tipo: 'Realizado',         item: 'B',     projecao_2026: rProj,   _monthly: rMonthly   },
-        { inibank, iniciativa: fData.desc, tipo: 'Resultado',         item: 'A-B=C', projecao_2026: resProj, _monthly: resMonthly },
-        { inibank, iniciativa: fData.desc, tipo: 'Forecast Ajustado', item: 'FA',    projecao_2026: faProj,  _monthly: faMonthly  }
+        { inibank, iniciativa: fData.desc, status, tipo: 'Forecast',          item: 'A',     projecao_2026: fProj,   _monthly: fMonthly   },
+        { inibank, iniciativa: fData.desc, status, tipo: 'Realizado',         item: 'B',     projecao_2026: rProj,   _monthly: rMonthly   },
+        { inibank, iniciativa: fData.desc, status, tipo: 'Resultado',         item: 'A-B=C', projecao_2026: resProj, _monthly: resMonthly },
+        { inibank, iniciativa: fData.desc, status, tipo: 'Forecast Ajustado', item: 'FA',    projecao_2026: faProj,  _monthly: faMonthly  }
       );
     });
 
-    Logger.log('[ForecastData] rows geradas: ' + rows.length + ' mesRef=' + mesRef);
+    const activeInibankCodes = inibankOrder.filter(k => (forecastMap[k].status || 'Ativa') === 'Ativa');
+    Logger.log('[ForecastData] rows geradas: ' + rows.length + ' mesRef=' + mesRef +
+               ' ativas=' + activeInibankCodes.length + '/' + inibankOrder.length);
 
-    return { rows, months, mesReferencia: mesRef };
+    return { rows, months, mesReferencia: mesRef, activeInibankCodes };
   });
 }
 
