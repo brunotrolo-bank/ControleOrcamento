@@ -558,6 +558,11 @@ window.CardFilter = (function() {
     return copy;
   }
 
-  return { initialize, cleanup, getFilters };
+  // Opções de Iniciativa vindas do FORECAST: [{ code, label, active }]
+  function getIniciativaOptions() {
+    return _iniOptions.map(function (o) { return { code: o.code, label: o.label, active: !!o.active }; });
+  }
+
+  return { initialize, cleanup, getFilters, getIniciativaOptions };
 })();
 </script>

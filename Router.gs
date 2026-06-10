@@ -893,12 +893,21 @@ function routerGetNotaFiscalCombined() {
     const combined = nfs.map(nf => {
       const key = (nf.nome_fantasia || '') + '|' + (nf.nfe || '');
       const profissionais = analiticoIndex[key] || [];
-      
+
       return Object.assign({}, nf, {
         profissionais: profissionais
       });
     });
 
-    return { data: combined };
+    // Profissionais ativos = prestadores com status "Ativo" na aba PRESTADOR
+    let prestadoresAtivos = 0;
+    try {
+      prestadoresAtivos = fetchAll(ALLOWED_SHEETS.PRESTADOR)
+        .filter(r => String(r.status_prestador || '').toLowerCase().includes('ativo')).length;
+    } catch (e) {
+      Logger.log('[NotaFiscalCombined] PRESTADOR indisponivel: ' + e.message);
+    }
+
+    return { data: combined, prestadoresAtivos: prestadoresAtivos };
   });
 }
