@@ -378,16 +378,18 @@
 
 .hx-scroll { overflow-x: auto; padding-bottom: 4px; }
 
-.hx-table { border-collapse: separate; border-spacing: 3px; min-width: 100%; }
+/* width:100% + table-layout:fixed faz as colunas de mês esticarem para
+   preencher todo o espaço restante (fora nome e total) → células grandes. */
+.hx-table { border-collapse: separate; border-spacing: 5px; width: 100%; table-layout: fixed; }
 .hx-table th {
-  font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+  font-size: 0.64rem; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.04em; color: var(--c-outline);
   padding: 4px 6px; text-align: center; white-space: nowrap;
 }
 .hx-table th.hx-rowhead, .hx-table td.hx-rowhead {
   text-align: left; position: sticky; left: 0; z-index: 2;
   background: var(--c-surface);
-  min-width: 188px; max-width: 220px;
+  width: 200px; min-width: 200px; max-width: 200px;
 }
 .hx-rowhead-inner { display: flex; align-items: center; gap: 9px; }
 .hx-dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
@@ -397,19 +399,21 @@
 }
 .hx-icode { font-size: 0.66rem; color: var(--c-outline); font-family: 'DM Mono', monospace; }
 
-/* Células de calor */
+/* Células de calor — ocupam toda a largura da coluna do mês */
 .hx-cell {
   position: relative;
-  width: 58px; height: 38px;
-  border-radius: 8px;
-  text-align: center; vertical-align: middle;
-  font-family: 'DM Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 56px;
+  border-radius: 11px;
+  text-align: center;
+  font-family: 'DM Mono', monospace; font-size: 0.92rem; font-weight: 800;
+  letter-spacing: -0.01em;
   cursor: default;
   transition: transform var(--t-fast), box-shadow var(--t-fast), outline var(--t-fast);
   outline: 0 solid transparent;
 }
 .hx-cell:hover {
-  transform: scale(1.16);
+  transform: scale(1.1);
   box-shadow: var(--el-3);
   z-index: 5;
   outline: 2px solid var(--c-surface);
@@ -419,7 +423,7 @@
 
 /* Coluna de tendência (sparkline) + total da linha */
 .hx-trend svg { display: block; }
-.hx-rowtotal { text-align: right; white-space: nowrap; padding-left: 6px; min-width: 150px; }
+.hx-rowtotal { text-align: right; white-space: nowrap; padding-left: 6px; width: 184px; min-width: 184px; max-width: 184px; }
 .hx-rowtotal-bar {
   height: 7px; border-radius: 4px; background: var(--c-surface-cont);
   overflow: hidden; margin-top: 4px;
@@ -1615,7 +1619,9 @@
     '</div>';
 
     // ── Tabela do mapa ───────────────────────────────────────────────────
-    html += '<div class="hx-scroll"><table class="hx-table"><thead><tr>'+
+    // min-width garante células largas; em telas estreitas o container rola.
+    var hxMinW = 200 + 184 + sortedMonths.length*72;
+    html += '<div class="hx-scroll"><table class="hx-table" style="min-width:'+hxMinW+'px;"><thead><tr>'+
       '<th class="hx-rowhead">Iniciativa</th>';
     sortedMonths.forEach(function(m){ html+='<th>'+E(months[m])+'</th>'; });
     html += '<th class="hx-rowtotal" style="text-align:right;">Total &amp; tendência</th></tr></thead><tbody>';
