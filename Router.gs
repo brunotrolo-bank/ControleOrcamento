@@ -903,15 +903,12 @@ function routerGetNotaFiscalCombined() {
       });
     });
 
-    // Profissionais ativos = prestadores com status "Ativo" na aba PRESTADOR
-    // Também monta um mapa de status por matrícula e por nome, para que o
-    // componente de Profissionais Alocados possa filtrar Ativo/Inativo.
+    // Lista COMPLETA de prestadores (aba PRESTADOR) — a lista de Profissionais
+    // Alocados deve mostrar todos eles, mesmo sem nota fiscal analítica.
+    // prestadoresAtivos = contagem de status "Ativo".
     let prestadoresAtivos = 0;
-    const prestadorStatus = { byMat: {}, byNome: {} };
+    const prestadores = [];
 
-    const _normNome = function (v) {
-      return String(v || '').trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-    };
     const _statusLabel = function (s) {
       const k = String(s || '').trim().toLowerCase();
       if (k === 'ativo' || k === 'ativa') return 'Ativo';
@@ -923,16 +920,16 @@ function routerGetNotaFiscalCombined() {
       fetchAll(ALLOWED_SHEETS.PRESTADOR).forEach(r => {
         const status = _statusLabel(r.status_prestador || r.status);
         if (status === 'Ativo') prestadoresAtivos++;
-        const mat  = String(r.matricula || r.matricula_prestador || '').trim();
-        const nome = r.nome_prestador || r.nome_profissional || r.nome;
-        if (mat && status)  prestadorStatus.byMat[mat] = status;
-        const nk = _normNome(nome);
-        if (nk && status)   prestadorStatus.byNome[nk] = status;
+        const mat   = String(r.matricula || r.matricula_prestador || r.codigo || '').trim();
+        const nome  = String(r.nome_prestador || r.nome_profissional || r.nome || '').trim();
+        const papel = String(r.papel_prestador || r.papel || r.funcao || r.cargo || r.perfil || '').trim();
+        if (!mat && !nome) return;
+        prestadores.push({ mat: mat, nome: nome, status: status, papel: papel });
       });
     } catch (e) {
       Logger.log('[NotaFiscalCombined] PRESTADOR indisponivel: ' + e.message);
     }
 
-    return { data: combined, prestadoresAtivos: prestadoresAtivos, prestadorStatus: prestadorStatus };
+    return { data: combined, prestadoresAtivos: prestadoresAtivos, prestadores: prestadores };
   });
 }
