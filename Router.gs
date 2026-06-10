@@ -904,14 +904,35 @@ function routerGetNotaFiscalCombined() {
     });
 
     // Profissionais ativos = prestadores com status "Ativo" na aba PRESTADOR
+    // Também monta um mapa de status por matrícula e por nome, para que o
+    // componente de Profissionais Alocados possa filtrar Ativo/Inativo.
     let prestadoresAtivos = 0;
+    const prestadorStatus = { byMat: {}, byNome: {} };
+
+    const _normNome = function (v) {
+      return String(v || '').trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    };
+    const _statusLabel = function (s) {
+      const k = String(s || '').trim().toLowerCase();
+      if (k === 'ativo' || k === 'ativa') return 'Ativo';
+      if (k.indexOf('inativ') === 0)      return 'Inativo';
+      return k ? (k.charAt(0).toUpperCase() + k.slice(1)) : '';
+    };
+
     try {
-      prestadoresAtivos = fetchAll(ALLOWED_SHEETS.PRESTADOR)
-        .filter(r => String(r.status_prestador || '').trim().toLowerCase() === 'ativo').length;
+      fetchAll(ALLOWED_SHEETS.PRESTADOR).forEach(r => {
+        const status = _statusLabel(r.status_prestador || r.status);
+        if (status === 'Ativo') prestadoresAtivos++;
+        const mat  = String(r.matricula || r.matricula_prestador || '').trim();
+        const nome = r.nome_prestador || r.nome_profissional || r.nome;
+        if (mat && status)  prestadorStatus.byMat[mat] = status;
+        const nk = _normNome(nome);
+        if (nk && status)   prestadorStatus.byNome[nk] = status;
+      });
     } catch (e) {
       Logger.log('[NotaFiscalCombined] PRESTADOR indisponivel: ' + e.message);
     }
 
-    return { data: combined, prestadoresAtivos: prestadoresAtivos };
+    return { data: combined, prestadoresAtivos: prestadoresAtivos, prestadorStatus: prestadorStatus };
   });
 }

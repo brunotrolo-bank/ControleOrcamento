@@ -517,6 +517,14 @@
           <label>Fornecedor</label>
           <select id="prof-f-fornecedor"><option value="">Todos</option></select>
         </div>
+        <div class="prof-filter">
+          <label>Status</label>
+          <select id="prof-f-status">
+            <option value="">Todos</option>
+            <option value="Ativo">Ativo</option>
+            <option value="Inativo">Inativo</option>
+          </select>
+        </div>
         <div class="prof-filter prof-filter-search">
           <label>Buscar</label>
           <input type="text" id="prof-f-nome" placeholder="Nome ou matrícula...">
@@ -575,7 +583,8 @@
   var _forecastRows   = [];   // linhas de routerGetForecastData (Forecast/Realizado/Estimado/...)
   var _forecastMonths = [];   // labels de meses do forecast ("jun.-26")
   var _forecastLoaded = false;
-  var _profFilters = { papel:'', iniciativa:'', fornecedor:'', nome:'' };  // filtros locais de Profissionais Alocados
+  var _profFilters = { papel:'', iniciativa:'', fornecedor:'', status:'', nome:'' };  // filtros locais de Profissionais Alocados
+  var _prestadorStatus = { byMat:{}, byNome:{} };  // status (Ativo/Inativo) por prestador, da aba PRESTADOR
 
   function R(n) { return Math.round((parseFloat(n)||0)*100)/100; }
   function BRL(n){ return R(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
@@ -685,29 +694,33 @@
     }
 
     // Filtros locais de Profissionais Alocados
-    var profPapel = document.getElementById('prof-f-papel');
-    var profIni   = document.getElementById('prof-f-iniciativa');
-    var profForn  = document.getElementById('prof-f-fornecedor');
-    var profNome  = document.getElementById('prof-f-nome');
-    var profClear = document.getElementById('prof-f-clear');
+    var profPapel  = document.getElementById('prof-f-papel');
+    var profIni    = document.getElementById('prof-f-iniciativa');
+    var profForn   = document.getElementById('prof-f-fornecedor');
+    var profStatus = document.getElementById('prof-f-status');
+    var profNome   = document.getElementById('prof-f-nome');
+    var profClear  = document.getElementById('prof-f-clear');
     function _onProfFilterChange() {
-      _profFilters.papel      = profPapel ? profPapel.value : '';
-      _profFilters.iniciativa = profIni   ? profIni.value   : '';
-      _profFilters.fornecedor = profForn  ? profForn.value  : '';
-      _profFilters.nome       = profNome  ? profNome.value  : '';
+      _profFilters.papel      = profPapel  ? profPapel.value  : '';
+      _profFilters.iniciativa = profIni    ? profIni.value    : '';
+      _profFilters.fornecedor = profForn   ? profForn.value   : '';
+      _profFilters.status     = profStatus ? profStatus.value : '';
+      _profFilters.nome       = profNome   ? profNome.value   : '';
       renderProfDetail(_filteredData);
     }
-    if (profPapel) profPapel.addEventListener('change', _onProfFilterChange);
-    if (profIni)   profIni.addEventListener('change', _onProfFilterChange);
-    if (profForn)  profForn.addEventListener('change', _onProfFilterChange);
-    if (profNome)  profNome.addEventListener('input', _onProfFilterChange);
+    if (profPapel)  profPapel.addEventListener('change', _onProfFilterChange);
+    if (profIni)    profIni.addEventListener('change', _onProfFilterChange);
+    if (profForn)   profForn.addEventListener('change', _onProfFilterChange);
+    if (profStatus) profStatus.addEventListener('change', _onProfFilterChange);
+    if (profNome)   profNome.addEventListener('input', _onProfFilterChange);
     if (profClear) profClear.addEventListener('click', function(e) {
       e.stopPropagation();
-      _profFilters = { papel:'', iniciativa:'', fornecedor:'', nome:'' };
-      if (profPapel) profPapel.value = '';
-      if (profIni)   profIni.value   = '';
-      if (profForn)  profForn.value  = '';
-      if (profNome)  profNome.value  = '';
+      _profFilters = { papel:'', iniciativa:'', fornecedor:'', status:'', nome:'' };
+      if (profPapel)  profPapel.value  = '';
+      if (profIni)    profIni.value    = '';
+      if (profForn)   profForn.value   = '';
+      if (profStatus) profStatus.value = '';
+      if (profNome)   profNome.value   = '';
       renderProfDetail(_filteredData);
     });
 
@@ -1323,25 +1336,49 @@
 
   // ── PROFISSIONAIS ALOCADOS (componente dedicado + filtros locais) ─────
 
+  // Iniciativa da linha analítica (aba NOTA_FISCAL_ANALITICO), não da NF-pai.
+  function _anaIni(p) {
+    if (!p) return '';
+    var cands = ['iniciativa','inibank','ini_bank','codigo_iniciativa','cod_iniciativa','iniciativa_direcao'];
+    for (var i=0;i<cands.length;i++){ var v=p[cands[i]]; if(v!=null && String(v).trim()!=='') return String(v).trim(); }
+    for (var k in p){ if(/iniciativ|inibank/.test(k)){ var vv=p[k]; if(vv!=null && String(vv).trim()!=='') return String(vv).trim(); } }
+    return '';
+  }
+
+  function _normNome(v){ return String(v||'').trim().normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+
+  // Status (Ativo/Inativo) do prestador: tenta por matrícula, depois por nome.
+  function _profStatusOf(mat, nome) {
+    var byMat = _prestadorStatus.byMat || {}, byNome = _prestadorStatus.byNome || {};
+    var m = String(mat||'').trim();
+    if (m && byMat[m]) return byMat[m];
+    var nk = _normNome(nome);
+    if (nk && byNome[nk]) return byNome[nk];
+    return '';
+  }
+
   // Achata as linhas de profissionais de cada NF autorizada em entradas
-  // individuais, carregando iniciativa e fornecedor da NF de origem.
+  // individuais. A INICIATIVA vem da aba NOTA_FISCAL_ANALITICO (linha do
+  // profissional); o status Ativo/Inativo vem da aba PRESTADOR.
   function _profEntries(data) {
     var out = [];
     data.forEach(function(row){
       if((row.status_nfe||'').trim()!=='Autorizada') return;
       if(!row.profissionais||!Array.isArray(row.profissionais)) return;
-      var ini = row.iniciativa||'—', forn = row.nome_fantasia||'—';
+      var forn = row.nome_fantasia||'—';
       row.profissionais.forEach(function(p){
         if(!p.nome_profissional||p.nome_profissional==='-') return;
+        var ini = _anaIni(p) || row.iniciativa || '—';
         out.push({
-          mat:   p.matricula||'',
-          nome:  p.nome_profissional,
-          papel: (p.papel_prestador||'').trim() || '—',
-          ini:   ini,
-          forn:  forn,
-          total: R(p.subtotal_nfe||0),
-          horas: parseFloat(p.total_horas)||0,
-          hh:    parseFloat(p.hh)||0
+          mat:    p.matricula||'',
+          nome:   p.nome_profissional,
+          papel:  (p.papel_prestador||'').trim() || '—',
+          ini:    ini,
+          forn:   forn,
+          status: _profStatusOf(p.matricula, p.nome_profissional) || '—',
+          total:  R(p.subtotal_nfe||0),
+          horas:  parseFloat(p.total_horas)||0,
+          hh:     parseFloat(p.hh)||0
         });
       });
     });
@@ -1373,9 +1410,10 @@
     // Aplica filtros locais no nível de entrada
     var nq = (_profFilters.nome||'').trim().toLowerCase();
     var filtered = entries.filter(function(e){
-      if (_profFilters.papel      && e.papel !== _profFilters.papel) return false;
-      if (_profFilters.iniciativa && e.ini   !== _profFilters.iniciativa) return false;
-      if (_profFilters.fornecedor && e.forn  !== _profFilters.fornecedor) return false;
+      if (_profFilters.papel      && e.papel  !== _profFilters.papel) return false;
+      if (_profFilters.iniciativa && e.ini    !== _profFilters.iniciativa) return false;
+      if (_profFilters.fornecedor && e.forn   !== _profFilters.fornecedor) return false;
+      if (_profFilters.status     && e.status !== _profFilters.status) return false;
       if (nq && (e.nome.toLowerCase().indexOf(nq)===-1 && String(e.mat).toLowerCase().indexOf(nq)===-1)) return false;
       return true;
     });
@@ -1384,9 +1422,10 @@
     var profs={};
     filtered.forEach(function(e){
       var k=(e.mat||'')+'|'+e.nome;
-      if(!profs[k]) profs[k]={mat:e.mat,nome:e.nome,papeis:{},inis:{},forns:{},total:0,horas:0,nfs:0};
+      if(!profs[k]) profs[k]={mat:e.mat,nome:e.nome,status:e.status,papeis:{},inis:{},forns:{},total:0,horas:0,nfs:0};
       var d=profs[k];
       d.total=R(d.total+e.total); d.horas+=e.horas; d.nfs++;
+      if(e.status && e.status!=='—') d.status=e.status;
       if(e.papel!=='—') d.papeis[e.papel]=1;
       if(e.ini!=='—')   d.inis[e.ini]=1;
       if(e.forn!=='—')  d.forns[e.forn]=1;
@@ -1405,7 +1444,7 @@
     var maxV=profs[sorted[0]].total||1;
 
     var h='<table class="home-table"><thead><tr>'+
-      '<th>#</th><th>Matrícula</th><th>Profissional</th><th>Papel</th>'+
+      '<th>#</th><th>Matrícula</th><th>Profissional</th><th>Papel</th><th>Status</th>'+
       '<th style="text-align:right;">Inic.</th><th style="text-align:right;">Forn.</th>'+
       '<th style="text-align:right;">NFs</th><th style="text-align:right;">Horas</th>'+
       '<th style="text-align:right;">R$/h</th><th style="text-align:right;">Total</th>'+
@@ -1417,11 +1456,17 @@
       var papelLbl=papeisArr.length===0?'—':papeisArr.length===1?papeisArr[0]:papeisArr.length+' papéis';
       var rhh=p.horas>0?p.total/p.horas:0;
       var pct=p.total/tot*100, barPct=Math.min(100,p.total/maxV*100);
+      var stPill = p.status==='Ativo'
+        ? '<span class="rank-pill" style="background:rgba(16,185,129,0.14);color:#10b981;">Ativo</span>'
+        : p.status==='Inativo'
+          ? '<span class="rank-pill" style="background:var(--c-error-cont);color:var(--c-error);">Inativo</span>'
+          : '<span class="rank-pill" style="background:var(--c-surface-cont);color:var(--c-outline);">—</span>';
       h+='<tr>'+
         '<td><span class="home-rank-badge" style="background:'+c+';">'+(i+1)+'</span></td>'+
         '<td class="col-mono" style="font-size:0.72rem;color:var(--c-outline);">'+E(p.mat)+'</td>'+
         '<td style="font-weight:600;font-size:0.82rem;white-space:nowrap;">'+E(p.nome)+'</td>'+
         '<td style="color:var(--c-outline);font-size:0.74rem;white-space:nowrap;" title="'+E(papeisArr.join(', '))+'">'+E(papelLbl)+'</td>'+
+        '<td>'+stPill+'</td>'+
         '<td class="col-mono" style="text-align:right;font-size:0.75rem;" title="'+E(Object.keys(p.inis).join(', '))+'">'+nIni+'</td>'+
         '<td class="col-mono" style="text-align:right;font-size:0.75rem;" title="'+E(Object.keys(p.forns).join(', '))+'">'+nForn+'</td>'+
         '<td class="col-mono" style="text-align:right;font-size:0.75rem;">'+p.nfs+'</td>'+
@@ -1440,7 +1485,7 @@
     h+='</tbody><tfoot><tr style="font-weight:700;background:var(--c-surface-cont-low);">'+
       '<td></td><td></td>'+
       '<td style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--c-on-surface-variant);">Total ('+sorted.length+')</td>'+
-      '<td></td><td></td><td></td>'+
+      '<td></td><td></td><td></td><td></td>'+
       '<td class="col-mono" style="text-align:right;font-size:0.75rem;">'+tNfs+'</td>'+
       '<td class="col-mono" style="text-align:right;font-size:0.75rem;">'+tHoras.toFixed(1)+'h</td>'+
       '<td></td>'+
@@ -1588,6 +1633,7 @@
         if(!res.success){SyncMonitor.update('error','Erro');return;}
         _allData=res.data||[];
         _prestadoresAtivos = res.prestadoresAtivos || 0;
+        _prestadorStatus = res.prestadorStatus || { byMat:{}, byNome:{} };
         _loaded=true;
         // Respeita filtros padrão do Card_Filter (Status=Autorizada, Competência=mês mais recente)
         var f = (typeof CardFilter !== 'undefined' && CardFilter.getFilters) ? CardFilter.getFilters() : null;
