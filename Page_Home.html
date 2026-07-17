@@ -1643,9 +1643,8 @@
 
       var r = real.byKey[_joinKey(pr.mat, pr.nome)] || null;
 
-      // Filtro de INICIATIVA: inclui quem tem realizado analítico nessa ini
-      // OU quem está registrado nessa ini na aba PRESTADOR (mesmo sem NF analítica).
-      if(iniSel && !(r && r.inis[iniSel]) && pr.iniciativa !== iniSel) return;
+      // Filtro de INICIATIVA: filtra pela iniciativa cadastrada na aba PRESTADOR.
+      if(iniSel && pr.iniciativa !== iniSel) return;
 
       rows.push({
         mat: pr.mat, nome: pr.nome, papel: pr.papel||'—', status: pr.status||'—',
@@ -1742,27 +1741,13 @@
 
       var r = real.byKey[_joinKey(pr.mat, pr.nome)] || null;
 
-      // Decide em quais squads este profissional aparece.
-      // Sempre garante que a ini da aba PRESTADOR entra como squad principal.
-      var personInis;
+      // Squad definido exclusivamente pela aba PRESTADOR (pr.iniciativa).
+      // r.inis (NFs analíticas) é usado apenas para exibir o realizado — nunca para definir o squad.
       var prIni = pr.iniciativa || 'Sem Iniciativa';
-      if(r && Object.keys(r.inis).length > 0){
-        var iniSet = {};
-        iniSet[prIni] = 1;
-        Object.keys(r.inis).forEach(function(i){ iniSet[i] = 1; });
-        personInis = Object.keys(iniSet);
-      } else {
-        personInis = [prIni];
-      }
+      var personInis = [prIni];
 
-      // Filtro de iniciativa
-      if(iniSel){
-        personInis = personInis.filter(function(i){ return i === iniSel; });
-        if(!personInis.length){
-          if(pr.iniciativa === iniSel) personInis = [iniSel];
-          else return;
-        }
-      }
+      // Filtro de iniciativa — filtra pela aba PRESTADOR
+      if(iniSel && prIni !== iniSel) return;
 
       personInis.forEach(function(ini){
         if(!squads[ini]) squads[ini] = { members: [], timeLabel: '' };
