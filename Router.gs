@@ -364,7 +364,7 @@ function routerGetDashboardData() {
         vence_30_val: vence30Val,
         vence_30_qtd: vence30Qtd,
         vencidas_qtd: vencidasQtd,
-        ativos:       fetchAll(ALLOWED_SHEETS.PRESTADOR).filter(r=>(r.status_prestador||'').includes('Ativo')).length,
+        ativos:       (function(){ var prRows=fetchAll(ALLOWED_SHEETS.PRESTADOR); var prKeys=prRows.length?Object.keys(prRows[0]).filter(function(k){return k!=='__rowNumber';}):[]; var K_ST=prKeys.find(function(k){return /status|situac/.test(k);})||null; var _sl=function(s){var k=String(s||'').trim().toLowerCase();return(k==='ativo'||k==='ativa')?'Ativo':k.indexOf('inativ')===0?'Inativo':k;}; return prRows.filter(function(r){return K_ST&&_sl(r[K_ST])==='Ativo';}).length; })(),
       },
       por_mes:  porMes,
       por_ini:  porIni,
