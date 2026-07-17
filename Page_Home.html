@@ -1603,14 +1603,19 @@
   }
 
   function _fillProfSelects(real) {
-    var papeisOpt={}, fornsOpt={};
+    var papeisOpt={}, fornsOpt={}, inisOpt={};
+    // Popula filtros a partir da aba PRESTADOR (fonte primária),
+    // não de real.inisAll (que só tem iniciativas com NF analítica aprovada).
     _prestadores.forEach(function(pr){
       if(pr.papel) papeisOpt[pr.papel]=1;
       if(pr.fornecedor) fornsOpt[pr.fornecedor]=1;
+      if(pr.iniciativa) inisOpt[pr.iniciativa]=1;
     });
+    // Adiciona também iniciativas que apareceram em NFs analíticas (sem duplicar)
+    Object.keys(real.inisAll).forEach(function(ini){ if(ini) inisOpt[ini]=1; });
     _fillSelect(document.getElementById('prof-f-papel'),      Object.keys(papeisOpt), _profFilters.papel);
     _fillSelect(document.getElementById('prof-f-fornecedor'), Object.keys(fornsOpt),  _profFilters.fornecedor);
-    _fillSelect(document.getElementById('prof-f-iniciativa'), Object.keys(real.inisAll), _profFilters.iniciativa);
+    _fillSelect(document.getElementById('prof-f-iniciativa'), Object.keys(inisOpt),   _profFilters.iniciativa);
   }
 
   function renderProfDetail(data) {
@@ -1760,7 +1765,9 @@
       }
 
       personInis.forEach(function(ini){
-        if(!squads[ini]) squads[ini] = { members: [] };
+        if(!squads[ini]) squads[ini] = { members: [], timeLabel: '' };
+        // Usa pr.time (coluna TIME da aba PRESTADOR) como label descritivo do squad
+        if(pr.iniciativa === ini && pr.time) squads[ini].timeLabel = pr.time;
         squads[ini].members.push({
           mat: pr.mat, nome: pr.nome, papel: pr.papel||'—',
           status: pr.status||'—', fornecedor: pr.fornecedor||'—',
@@ -1793,7 +1800,7 @@
       var sqTotal = sq.members.reduce(function(s,m){ return R(s+m.realIni); }, 0);
       var sqEst   = sq.members.reduce(function(s,m){ return R(s+m.estMensal); }, 0);
       var color   = _CL[idx % _CL.length];
-      var iniLabel = descs[ini] || ini;
+      var iniLabel = squads[ini].timeLabel || descs[ini] || ini;
 
       // Capacidade estimada: taxa individual por desenvolvedor (não multiplica pelo total)
       var devCount = sq.members.filter(function(m){ return /desenvolv/i.test(m.papel||''); }).length;
