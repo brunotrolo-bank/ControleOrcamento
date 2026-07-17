@@ -962,6 +962,8 @@ function routerGetNotaFiscalCombined() {
       const K_PAPEL  = _find([/papel/, /funcao/, /cargo/, /perfil/, /especialidad/]);
       const K_FORN   = _find([/fantasia/, /fornecedor/, /empresa/, /razao/]);
       const K_INI    = _find([/iniciativa/, /inibank/]);
+      const K_TIME   = _find([/^time$/, /nome_time/, /squad/], /estimado|mensal|anual/);
+      const K_NOME_INI = _find([/nome_iniciativa/, /descricao_iniciativa/, /iniciativa_descricao/, /projeto/, /nome_projeto/], /^iniciativa$/);
       const K_HH     = _find([/^hh$/, /hora_homem/, /^h_h$/]);
       const K_ESTM   = _find([/estimado_mensal/, /est_mensal/]);
 
@@ -972,16 +974,20 @@ function routerGetNotaFiscalCombined() {
         const nome  = String((K_NOME ? r[K_NOME] : '') || '').trim();
         const papel = String((K_PAPEL? r[K_PAPEL]: '') || '').trim();
         const forn  = String((K_FORN ? r[K_FORN] : '') || '').trim();
-        const ini   = String((K_INI  ? r[K_INI]  : '') || '').trim();
+        const ini     = String((K_INI      ? r[K_INI]      : '') || '').trim();
+        const time    = String((K_TIME     ? r[K_TIME]     : '') || '').trim();
+        const nomeIni = String((K_NOME_INI ? r[K_NOME_INI] : '') || '').trim();
         if (!mat && !nome) return;
         prestadores.push({
           mat: mat, nome: nome, status: status, papel: papel,
           fornecedor: forn, iniciativa: ini,
+          time: time,           // coluna TIME: nome completo do squad/time
+          nomeIni: nomeIni,     // nome descritivo da iniciativa (se existir coluna separada)
           hh: _numBR(K_HH ? r[K_HH] : 0),
           estMensal: _numBR(K_ESTM ? r[K_ESTM] : 0)
         });
       });
-      Logger.log('[NotaFiscalCombined] PRESTADOR: ' + prestadores.length + ' linhas (mat=' + K_MAT + ' nome=' + K_NOME + ' status=' + K_STATUS + ' papel=' + K_PAPEL + ' forn=' + K_FORN + ' ini=' + K_INI + ')');
+      Logger.log('[NotaFiscalCombined] PRESTADOR: ' + prestadores.length + ' linhas (mat=' + K_MAT + ' nome=' + K_NOME + ' status=' + K_STATUS + ' papel=' + K_PAPEL + ' forn=' + K_FORN + ' ini=' + K_INI + ' time=' + K_TIME + ')');
     } catch (e) {
       Logger.log('[NotaFiscalCombined] PRESTADOR indisponivel: ' + e.message);
     }
