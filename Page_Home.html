@@ -909,11 +909,11 @@
     if (profNome)   profNome.addEventListener('input', _onProfFilterChange);
     if (profClear) profClear.addEventListener('click', function(e) {
       e.stopPropagation();
-      _profFilters = { papel:'', iniciativa:'', fornecedor:'', status:'', nome:'' };
+      _profFilters = { papel:'', iniciativa:'', fornecedor:'', status:'Ativo', nome:'' };
       if (profPapel)  profPapel.value  = '';
       if (profIni)    profIni.value    = '';
       if (profForn)   profForn.value   = '';
-      if (profStatus) profStatus.value = '';
+      if (profStatus) profStatus.value = 'Ativo';
       if (profNome)   profNome.value   = '';
       renderProfDetail(_filteredData);
     });
@@ -1501,7 +1501,7 @@
       if(!row.profissionais||!Array.isArray(row.profissionais)) return;
       row.profissionais.forEach(function(p){
         if(!p.nome_profissional||p.nome_profissional==='-') return;
-        var k=(p.matricula||'')+'|'+p.nome_profissional;
+        var k=_joinKey(p.matricula, p.nome_profissional);
         if(!profs[k]) profs[k]={mat:p.matricula||'',nome:p.nome_profissional,papel:p.papel_prestador||'',total:0,horas:0,hh:parseFloat(p.hh)||0,nfs:0};
         profs[k].total=R(profs[k].total+R(p.subtotal_nfe||0));
         profs[k].horas+=parseFloat(p.total_horas)||0;
@@ -1585,7 +1585,7 @@
         d.total=R(d.total+R(p.subtotal_nfe||0));
         d.horas+=parseFloat(p.total_horas)||0;
         d.nfs++;
-        if(ini!=='—') d.inis[ini]=1;
+        if(ini!=='—') d.inis[ini]=R((d.inis[ini]||0)+R(p.subtotal_nfe||0));
       });
     });
     return { byKey: byKey, inisAll: inisAll };
