@@ -1604,15 +1604,15 @@
 
   function _fillProfSelects(real) {
     var papeisOpt={}, fornsOpt={}, inisOpt={};
-    // Popula filtros a partir da aba PRESTADOR (fonte primária),
-    // não de real.inisAll (que só tem iniciativas com NF analítica aprovada).
+    // Popula opções respeitando o filtro de status já selecionado,
+    // para que iniciativas sem nenhum prestador no status ativo não apareçam.
+    var statusSel = _profFilters.status;
     _prestadores.forEach(function(pr){
+      if(statusSel && pr.status !== statusSel) return;
       if(pr.papel) papeisOpt[pr.papel]=1;
       if(pr.fornecedor) fornsOpt[pr.fornecedor]=1;
       if(pr.iniciativa) inisOpt[pr.iniciativa]=1;
     });
-    // Adiciona também iniciativas que apareceram em NFs analíticas (sem duplicar)
-    Object.keys(real.inisAll).forEach(function(ini){ if(ini) inisOpt[ini]=1; });
     _fillSelect(document.getElementById('prof-f-papel'),      Object.keys(papeisOpt), _profFilters.papel);
     _fillSelect(document.getElementById('prof-f-fornecedor'), Object.keys(fornsOpt),  _profFilters.fornecedor);
     _fillSelect(document.getElementById('prof-f-iniciativa'), Object.keys(inisOpt),   _profFilters.iniciativa);
